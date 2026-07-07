@@ -30,3 +30,7 @@ infra/cdk.out/
 infra/*.js
 infra/*.d.ts
 infra/!cdk.json
+
+# Local tool caches
+.impeccable/
+infra/.impeccable/

@@ -88,10 +88,22 @@ export class JeanieStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    // ── WAF: rate-based rule (CloudFront scope must be us-east-1) ─
-    // Opt-in via ENABLE_WAF=true — costs ~$6/mo. Off by default for cheap testing;
-    // turn on before going live/public (Express layer still rate-limits either way).
-    const enableWaf = process.env.ENABLE_WAF === 'true';
+    // ── WAF ────────────────────────────────────────────────────────
+    // If this distribution is enrolled in a CloudFront flat-rate pricing plan
+    // (Free/Pro/Business/Premium, set via the console), AWS requires a WAF Web
+    // ACL to stay associated with it — that Web ACL is auto-created by
+    // CloudFront and CANNOT be removed while the plan is active. Leaving
+    // webAclId unset here would make CDK try to strip it on the next deploy,
+    // which AWS will reject (or worse, disrupt the plan). Set
+    // CLOUDFRONT_WEB_ACL_ID to that existing ARN (find it via
+    // `aws cloudfront get-distribution-config --id <ID> --query
+    // DistributionConfig.WebACLId`) to make CDK reference it instead of
+    // trying to manage its own.
+    //
+    // If you're NOT on a flat-rate plan, the old opt-in path still works:
+    // ENABLE_WAF=true creates a separate pay-as-you-go Web ACL (~$6/mo).
+    const existingWebAclId = process.env.CLOUDFRONT_WEB_ACL_ID;
+    const enableWaf = !existingWebAclId && process.env.ENABLE_WAF === 'true';
     const webAcl = enableWaf ? new wafv2.CfnWebACL(this, 'WebAcl', {
       defaultAction: { allow: {} },
       scope: 'CLOUDFRONT',
@@ -162,8 +174,12 @@ export class JeanieStack extends cdk.Stack {
         { httpStatus: 403, responseHttpStatus: 200, responsePagePath: '/index.html', ttl: cdk.Duration.minutes(1) },
         { httpStatus: 404, responseHttpStatus: 200, responsePagePath: '/index.html', ttl: cdk.Duration.minutes(1) },
       ],
-      webAclId: webAcl?.attrArn,
-      priceClass: cf.PriceClass.PRICE_CLASS_100, // US/EU/Canada/Israel only — cheapest tier
+      webAclId: existingWebAclId || webAcl?.attrArn,
+      // CloudFront flat-rate pricing plans (Free/Pro/Business/Premium) control edge
+      // coverage themselves and reject an explicit priceClass ("Distributions with
+      // the Free pricing plan can't have the following features: Price class").
+      // Only set it when NOT on a plan (existingWebAclId unset).
+      ...(existingWebAclId ? {} : { priceClass: cf.PriceClass.PRICE_CLASS_100 }), // US/EU/Canada/Israel only — cheapest tier
     });
 
     // ── Deploy React build/ to S3 on every `cdk deploy` ───────────

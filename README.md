@@ -20,7 +20,7 @@ We will build:
 - A CloudFront distribution routing static assets and `/api/*` traffic
 - API Gateway (HTTP API) in front of the Lambda
 - Anthropic API key passed to Lambda as an encrypted-at-rest environment variable
-- Optional WAF for public-facing rate limiting
+- WAF, either bundled via a CloudFront flat-rate pricing plan (can be $0/mo) or opt-in pay-as-you-go
 
 ### Request Routing Table
 
@@ -134,6 +134,9 @@ Routing both the static site and `/api/*` through the same CloudFront distributi
 
 **Cost Control via Feature Flags**
 WAF is gated behind an `ENABLE_WAF` environment variable so a cheap test deploy can skip it (~$6/mo saved) while a production deploy can flip it on with no code changes.
+
+**Flat-Rate Pricing Plans Change the WAF Calculus**
+CloudFront's newer per-distribution flat-rate plans (Free/Pro/Business/Premium) bundle WAF, DDoS protection, and bot management into one monthly price — the Free tier includes WAF at $0 up to 1M requests/100GB per month. Enrolling attaches an AWS-managed Web ACL that **cannot be removed while the plan is active**. CDK must reference that existing ACL (`CLOUDFRONT_WEB_ACL_ID`) rather than manage its own — leaving it unset makes the next deploy try to strip the required association, which AWS rejects. The plan also takes over `PriceClass` (an explicit price class isn't allowed on Free-plan distributions), so that property is conditionally omitted too.
 
 **Right-Sizing Secret Storage for Volume**
 Secrets Manager costs a flat $0.40/mo per secret regardless of usage — real money at near-zero request volume. A Lambda environment variable is encrypted at rest by default and free, at the cost of losing rotation and a dedicated access audit trail. Below a couple hundred requests/month, that trade is worth making; above it, or for a production/public deploy, Secrets Manager's rotation support earns its cost back.

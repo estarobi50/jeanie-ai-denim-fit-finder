@@ -20,8 +20,8 @@
   <text x="390" y="130" text-anchor="middle" font-size="14" font-weight="700" fill="#9a3412">CloudFront</text>
   <text x="390" y="148" text-anchor="middle" font-size="11" fill="#c2410c">HTTPS, single origin</text>
   <text x="390" y="166" text-anchor="middle" font-size="11" fill="#c2410c">PRICE_CLASS_100</text>
-  <text x="390" y="184" text-anchor="middle" font-size="11" fill="#c2410c">WAF optional</text>
-  <text x="390" y="202" text-anchor="middle" font-size="10" font-style="italic" fill="#9a3412">(ENABLE_WAF=true)</text>
+  <text x="390" y="184" text-anchor="middle" font-size="11" fill="#c2410c">WAF: flat-rate plan or pay-as-you-go</text>
+  <text x="390" y="202" text-anchor="middle" font-size="10" font-style="italic" fill="#9a3412">(CLOUDFRONT_WEB_ACL_ID or ENABLE_WAF=true)</text>
 
   <!-- S3 -->
   <rect x="580" y="40" width="180" height="80" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>

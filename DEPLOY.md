@@ -1,6 +1,6 @@
 # Jeanie — AWS Deploy
 
-Architecture: CloudFront → S3 (React build) and CloudFront → API Gateway → Lambda (Express server). Anthropic API key passed to Lambda as an encrypted-at-rest environment variable. WAF is optional (opt-in via `ENABLE_WAF=true`) — off by default for low-volume testing. Single stack in `us-east-1` (required for CloudFront WAF, even when WAF is disabled, to keep the option available without restructuring).
+Architecture: CloudFront → S3 (React build) and CloudFront → API Gateway → Lambda (Express server). Anthropic API key passed to Lambda as an encrypted-at-rest environment variable. WAF is either bundled via a CloudFront flat-rate pricing plan (see below) or opt-in pay-as-you-go (`ENABLE_WAF=true`). Single stack in `us-east-1` (required for CloudFront WAF).
 
 ## One-time setup
 
@@ -54,15 +54,21 @@ CDK diffs and pushes only what changed. CloudFront invalidations on the static p
    ```
 3. Redeploy, then create Route 53 A/AAAA alias records pointing at the distribution.
 
-## Enabling WAF (recommended before going live/public)
+## WAF: two ways to get it
 
-WAF is off by default to keep testing cheap. Turn it on with:
+**Option A — CloudFront flat-rate pricing plan (recommended, can be $0/mo).** AWS's newer per-distribution pricing plans (Free/Pro/Business/Premium) bundle AWS WAF, DDoS protection, bot management, and more into one flat monthly price — the Free tier includes WAF at $0 for up to 1M requests/100GB data transfer per month. Subscribe your distribution to a plan in the CloudFront console (**Distributions → your distribution → Manage Plan**). AWS auto-creates and attaches a Web ACL that **cannot be removed while the plan is active** — you must tell CDK about it or the next deploy will try to strip it:
+```
+export CLOUDFRONT_WEB_ACL_ID=$(aws cloudfront get-distribution-config --id <YOUR_DIST_ID> --query DistributionConfig.WebACLId --output text)
+```
+Add this to your `.env` so it's set on every future deploy. See [AWS's flat-rate pricing plan docs](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/flat-rate-pricing-plan.html) for full details, plan tiers, and usage-allowance behavior (no overage charges — sustained excess usage may adjust delivery performance rather than bill you more, per AWS).
+
+**Option B — Pay-as-you-go WAF (if not using a pricing plan).** Off by default to keep testing cheap:
 ```
 export ENABLE_WAF=true
 export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2)
 npm run deploy
 ```
-Adds a rate-based rule (1000 req/5min/IP) and AWS's managed common rule set, at ~$6/mo.
+Adds a rate-based rule (1000 req/5min/IP) and AWS's managed common rule set, at ~$6/mo. Ignored automatically if `CLOUDFRONT_WEB_ACL_ID` is set (Option A takes precedence).
 
 ## Local dev still works
 
@@ -83,9 +89,11 @@ At genuinely low volume (a couple hundred requests/month or less), most of the A
 | API Gateway HTTP API (low volume) | ~$0 |
 | S3 (build artifacts ~5MB) | $0.01 |
 | CloudWatch logs (1mo retention, low volume) | ~$0.01–0.05 |
-| WAF (only if `ENABLE_WAF=true`) | ~$6 |
-| **Total infra (WAF off)** | **~$0.01–0.10/mo** |
-| **Total infra (WAF on)** | **~$6–8/mo** |
+| WAF via pay-as-you-go (`ENABLE_WAF=true`) | ~$6 |
+| WAF via CloudFront Free flat-rate plan | $0 (bundled, up to 1M req/100GB/mo) |
+| **Total infra (no WAF)** | **~$0.01–0.10/mo** |
+| **Total infra (pay-as-you-go WAF)** | **~$6–8/mo** |
+| **Total infra (Free flat-rate plan, WAF included)** | **~$0.01–0.10/mo** |
 
 Anthropic API costs are separate and scale with usage. At higher production traffic, Lambda/API Gateway/CloudFront costs scale up from these near-zero figures — re-check via AWS Cost Explorer once real usage accrues rather than trusting this table at scale.
 
