@@ -8,7 +8,6 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigw from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import * as secrets from 'aws-cdk-lib/aws-secretsmanager';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as path from 'path';
@@ -17,15 +16,17 @@ export class JeanieStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // ── Secret: Anthropic API key ─────────────────────────────────
-    // Seed the value AFTER `cdk deploy` via:
-    //   aws secretsmanager put-secret-value --secret-id JeanieAnthropicKey \
-    //     --secret-string '{"ANTHROPIC_API_KEY":"sk-ant-..."}'
-    const anthropicSecret = new secrets.Secret(this, 'AnthropicKey', {
-      secretName: 'JeanieAnthropicKey',
-      description: 'Anthropic API key for Jeanie backend',
-      removalPolicy: cdk.RemovalPolicy.RETAIN, // don't nuke the secret on stack delete
-    });
+    // ── Anthropic API key ──────────────────────────────────────────
+    // Passed directly as a Lambda environment variable (encrypted at rest by
+    // Lambda by default) instead of Secrets Manager — saves the flat $0.40/mo
+    // secret fee, which only makes sense to trade away at genuinely low volume
+    // where key rotation / audit trail aren't needed. Set it in the shell
+    // before `cdk deploy`, e.g.:
+    //   export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY ../.env | cut -d= -f2)
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicApiKey) {
+      throw new Error('ANTHROPIC_API_KEY env var must be set before deploying (see infra/lib/jeanie-stack.ts)');
+    }
 
     // ── Lambda: Express server wrapped with serverless-http ───────
     // esbuild traces the real require graph from handler.js (server.js + express +
@@ -45,13 +46,11 @@ export class JeanieStack extends cdk.Stack {
       memorySize: 512,
       timeout: cdk.Duration.seconds(30),
       environment: {
-        ANTHROPIC_SECRET_NAME: anthropicSecret.secretName,
+        ANTHROPIC_API_KEY: anthropicApiKey,
         NODE_ENV: 'production',
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
-
-    anthropicSecret.grantRead(apiFn);
 
     // ── API Gateway HTTP API in front of the Lambda ───────────────
     const httpApi = new apigw.HttpApi(this, 'HttpApi', {
@@ -170,7 +169,6 @@ export class JeanieStack extends cdk.Stack {
     // ── Outputs ───────────────────────────────────────────────────
     new cdk.CfnOutput(this, 'SiteUrl', { value: `https://${distribution.distributionDomainName}` });
     new cdk.CfnOutput(this, 'ApiUrl', { value: httpApi.apiEndpoint });
-    new cdk.CfnOutput(this, 'SecretName', { value: anthropicSecret.secretName });
     new cdk.CfnOutput(this, 'BucketName', { value: siteBucket.bucketName });
   }
 }

@@ -20,7 +20,12 @@ const CLICKS_LOG = IS_LAMBDA
   ? '/tmp/clicks.log'
   : path.join(__dirname, 'clicks.log');
 
-// ── Anthropic key loader (env locally, Secrets Manager in Lambda) ──
+// ── Anthropic key loader ──────────────────────────────────
+// Read from env var everywhere (.env locally, Lambda environment config in
+// prod). Lambda env vars are encrypted at rest by default, so this avoids the
+// $0.40/mo flat Secrets Manager fee — worth it only at genuinely low volume,
+// where rotation/audit-trail features aren't needed. Falls back to Secrets
+// Manager only if ANTHROPIC_SECRET_NAME is explicitly set (opt-in).
 let cachedKey = null;
 async function getAnthropicKey() {
   if (cachedKey) return cachedKey;

@@ -83,21 +83,18 @@ This runs `react-scripts build` then `cdk deploy` from `infra/`. First deploy ta
 |---|---|
 | `SiteUrl` | CloudFront URL — the live application |
 | `ApiUrl` | API Gateway endpoint (proxied through CloudFront `/api/*`, not usually hit directly) |
-| `SecretName` | `JeanieAnthropicKey` — Secrets Manager secret name |
 | `BucketName` | S3 bucket holding the static build |
 
-### 6. SEED THE ANTHROPIC KEY
+### Anthropic API key
 
-Do this once, right after first deploy:
+The key is passed as a Lambda environment variable (encrypted at rest by Lambda by default) rather than Secrets Manager — this trades away key rotation/audit-trail features to avoid the flat $0.40/mo Secrets Manager fee, a reasonable trade only at genuinely low request volume. Set it in your shell before deploying:
 
 ```
-aws secretsmanager put-secret-value \
-  --secret-id JeanieAnthropicKey \
-  --secret-string '{"ANTHROPIC_API_KEY":"sk-ant-..."}' \
-  --region us-east-1
+export ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY ../.env | cut -d= -f2)
+npm run deploy
 ```
 
-The Lambda caches the key in memory per container; changing the secret takes effect on the next cold start.
+`cdk deploy` will fail fast with a clear error if `ANTHROPIC_API_KEY` isn't set in the environment.
 
 ---
 
@@ -128,7 +125,7 @@ Wrapping an existing Express app with `serverless-http` lets the same `server.js
 Naively zipping the whole project for a Lambda asset pulls in unrelated frontend tooling (React, its build chain) and can blow past Lambda's 250MB unzipped limit. Using CDK's `NodejsFunction` with esbuild traces the real dependency graph from the handler and bundles only what's actually imported.
 
 **Secrets Never Touch the Client**
-The Anthropic API key lives only in Secrets Manager and is read server-side inside the Lambda — the browser never sees it. The proxy pattern (client → own backend → third-party API) keeps the key private while still letting the SPA call an LLM.
+The Anthropic API key is read server-side inside the Lambda (as an encrypted-at-rest environment variable) — the browser never sees it. The proxy pattern (client → own backend → third-party API) keeps the key private while still letting the SPA call an LLM.
 
 **CDN + API Behind One Origin**
 Routing both the static site and `/api/*` through the same CloudFront distribution avoids CORS entirely for same-origin requests, simplifying the client fetch calls.
@@ -136,13 +133,16 @@ Routing both the static site and `/api/*` through the same CloudFront distributi
 **Cost Control via Feature Flags**
 WAF is gated behind an `ENABLE_WAF` environment variable so a cheap test deploy can skip it (~$6/mo saved) while a production deploy can flip it on with no code changes.
 
+**Right-Sizing Secret Storage for Volume**
+Secrets Manager costs a flat $0.40/mo per secret regardless of usage — real money at near-zero request volume. A Lambda environment variable is encrypted at rest by default and free, at the cost of losing rotation and a dedicated access audit trail. Below a couple hundred requests/month, that trade is worth making; above it, or for a production/public deploy, Secrets Manager's rotation support earns its cost back.
+
 ---
 
 ## TOOLS & SERVICES USED
 
 ---
 
-AWS Lambda, API Gateway (HTTP API), CloudFront, S3, Secrets Manager, WAFv2, CloudWatch Logs, AWS CDK (TypeScript), React, Express, Anthropic Claude API, esbuild
+AWS Lambda, API Gateway (HTTP API), CloudFront, S3, WAFv2 (optional), CloudWatch Logs, AWS CDK (TypeScript), React, Express, Anthropic Claude API, esbuild
 
 ---
 
