@@ -12,6 +12,8 @@ This project demonstrates the deployment of an **AI-powered body-shape and denim
 
 The application is a **React single-page app** backed by an **Express API** that calls the **Anthropic Claude API** to analyze a user's uploaded photo, classify their body shape against five archetypes, and recommend jean cuts and brands matched to that shape. The goal is to validate that the full request path — photo upload, AI analysis, brand recommendation, and click tracking — works end-to-end on a CDN-fronted serverless backend.
 
+![Jeanie AWS architecture and request flow](docs/architecture.svg)
+
 We will build:
 - A React frontend (Create React App) served as a static site
 - An Express API wrapped for AWS Lambda

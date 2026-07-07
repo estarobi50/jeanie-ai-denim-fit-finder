@@ -52,6 +52,20 @@ const claudeLimiter = rateLimit({
   message: { error: { message: 'Too many requests. Try again in a minute.' } },
 });
 
+// ── Shared site-key check ─────────────────────────────────
+// Not real cryptographic auth — REACT_APP_JEANIE_SITE_KEY ships inside the
+// client bundle, so anyone reading the page source can find it. It exists to
+// stop naive/scripted bots from hitting the endpoint directly without ever
+// loading the site, not to stop a determined attacker who inspects the bundle.
+function requireSiteKey(req, res, next) {
+  const expected = process.env.JEANIE_SITE_KEY;
+  if (!expected) return next(); // not configured — skip (e.g. quick local testing)
+  if (req.get('x-jeanie-key') !== expected) {
+    return res.status(401).json({ error: { message: 'Unauthorized' } });
+  }
+  next();
+}
+
 // ── Input validation middleware ───────────────────────────
 function validateClaudeRequest(req, res, next) {
   const { model, max_tokens, messages } = req.body || {};
@@ -69,7 +83,7 @@ function validateClaudeRequest(req, res, next) {
 }
 
 // ── Anthropic proxy ───────────────────────────────────────
-app.post('/api/claude', claudeLimiter, validateClaudeRequest, async (req, res) => {
+app.post('/api/claude', claudeLimiter, requireSiteKey, validateClaudeRequest, async (req, res) => {
   const apiKey = await getAnthropicKey();
 
   if (!apiKey || apiKey.startsWith('sk-ant-YOUR_')) {

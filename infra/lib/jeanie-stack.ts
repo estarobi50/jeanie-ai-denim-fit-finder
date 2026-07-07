@@ -28,6 +28,17 @@ export class JeanieStack extends cdk.Stack {
       throw new Error('ANTHROPIC_API_KEY env var must be set before deploying (see infra/lib/jeanie-stack.ts)');
     }
 
+    // ── Site key ─────────────────────────────────────────────────
+    // Shared header value the frontend sends on /api/claude calls (checked in
+    // server.js's requireSiteKey middleware). Not real auth — it ships inside
+    // the client bundle — but it stops naive/scripted bots hitting the
+    // endpoint directly without ever loading the page. Same value must be set
+    // as REACT_APP_JEANIE_SITE_KEY when running `npm run build`.
+    const siteKey = process.env.JEANIE_SITE_KEY;
+    if (!siteKey) {
+      throw new Error('JEANIE_SITE_KEY env var must be set before deploying (see infra/lib/jeanie-stack.ts)');
+    }
+
     // ── Lambda: Express server wrapped with serverless-http ───────
     // esbuild traces the real require graph from handler.js (server.js + express +
     // express-rate-limit + serverless-http) instead of zipping the whole repo —
@@ -47,22 +58,21 @@ export class JeanieStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       environment: {
         ANTHROPIC_API_KEY: anthropicApiKey,
+        JEANIE_SITE_KEY: siteKey,
         NODE_ENV: 'production',
       },
       logRetention: logs.RetentionDays.ONE_MONTH,
     });
 
     // ── API Gateway HTTP API in front of the Lambda ───────────────
+    // No CORS config: CloudFront fronts both the static site and /api/* on the
+    // same origin, so every real request here is same-origin and never
+    // triggers a CORS preflight. The previous `allowOrigins: ['*']` was
+    // unnecessary — anchor-tag navigations (the brand "Shop" links) aren't
+    // subject to CORS at all, and the one /api/r fetch call is also
+    // same-origin. Removing it closes off cross-site scripted access entirely.
     const httpApi = new apigw.HttpApi(this, 'HttpApi', {
       apiName: 'jeanie-api',
-      corsPreflight: {
-        // CloudFront fronts both the static site and the API on the same origin,
-        // so same-origin requests don't need CORS. We allow * only for /api/r
-        // (brand redirects open in a new tab). Tighten if you split domains later.
-        allowOrigins: ['*'],
-        allowMethods: [apigw.CorsHttpMethod.GET, apigw.CorsHttpMethod.POST, apigw.CorsHttpMethod.OPTIONS],
-        allowHeaders: ['content-type'],
-      },
     });
 
     const lambdaIntegration = new integrations.HttpLambdaIntegration('LambdaInt', apiFn);

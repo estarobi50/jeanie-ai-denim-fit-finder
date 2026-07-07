@@ -5,6 +5,14 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
    Design: Warm Light · Cormorant Garamond · Editorial luxury
    ────────────────────────────────────────────────────────────── */
 
+// Shared site-key header for /api/claude — not real auth (it ships in this
+// bundle, so it's readable via view-source), just raises the bar against
+// naive bots hitting the endpoint directly without loading the page first.
+const CLAUDE_HEADERS = {
+  "Content-Type": "application/json",
+  ...(process.env.REACT_APP_JEANIE_SITE_KEY ? { "X-Jeanie-Key": process.env.REACT_APP_JEANIE_SITE_KEY } : {}),
+};
+
 const T = {
   bg:        "#f7f4ef",
   surface:   "#ffffff",
@@ -823,7 +831,7 @@ export default function Jeanie() {
     setBrandsLoading(true); setBrands(null);
     try {
       const res = await fetch("/api/claude", {
-        method:"POST", headers:{ "Content-Type":"application/json" },
+        method:"POST", headers: CLAUDE_HEADERS,
         body: JSON.stringify({
           model:"claude-sonnet-4-5-20250929", max_tokens:1200,
           system:`You are Jeanie, a denim fit-AI whose knowledge is built exclusively from the design philosophies, fit systems, wash expertise, and sizing data of ten iconic denim brands: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, and Abercrombie & Fitch. You recommend ONLY from these ten brands. Given a body shape and recommended jean styles, return ONLY a raw JSON array — no markdown, no backticks, no prose. Return exactly 6 brand objects chosen from those 10 brands (no other brands). For each brand, name ONE real, currently-sold, well-known product line from that brand's actual denim lineup (e.g. Levi's 501 Original, Levi's Ribcage Straight, Gap '90s Loose, Gap Modern Bootcut, American Eagle Curvy Straight, American Eagle Mom Jean, Abercrombie Curve Love, Abercrombie 90s Straight Ultra High Rise, Wrangler Retro Slim, Lee Legendary Bootcut, Guess Sexy Curve Skinny, Mavi Kerry, Diesel Slandy, 7FAM Ellie Straight) — this must be a real product name, not invented. Schema: [{"brand":"Brand Name","productName":"Real Product Line Name","tier":"Luxury"|"Premium"|"Mid-Range"|"Budget","tagline":"One punchy brand tagline unique to that brand.","bestFor":"Which recommended style they excel at for this shape.","priceRange":"$XX–$XXX","whyItWorks":"1–2 sentences grounded in that brand's specific fit system or signature technology and why THIS product suits this body shape.","url":"https://www.brandwebsite.com"}]. Tier guide: 7 For All Mankind & Diesel = Luxury; Mavi & Guess = Premium; Levi's & Gap & Abercrombie & Fitch & American Eagle = Mid-Range; Lee & Wrangler = Budget. Include a good mix of tiers. Only these 10 brands, no exceptions.`,
@@ -889,7 +897,7 @@ export default function Jeanie() {
     setLoading(true); setError(null); setResult(null); setBrands(null);
     try {
       const res = await fetch("/api/claude", {
-        method:"POST", headers:{ "Content-Type":"application/json" },
+        method:"POST", headers: CLAUDE_HEADERS,
         body: JSON.stringify({
           model:"claude-sonnet-4-5-20250929", max_tokens:1000,
           system:`You are Jeanie, a denim fit-AI trained on the collective wisdom of eight iconic denim brands — Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, and 7 For All Mankind. Your style knowledge draws from Levi's taper expertise, Wrangler's western cut heritage, Lee's relaxed fit innovation, Gap's clean straight-leg tradition, Guess' curve-flattering premium denim, Mavi's Shaping Technology, Diesel's avant-garde silhouettes, and 7 For All Mankind's Body Contour series. Look at the photo and return ONLY a raw JSON object — no markdown, no backticks, no prose. Schema: {"shape":"Hourglass","confidence":92,"shapeDesc":"Short description.","traits":["t1","t2","t3"],"recommendations":[{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"}],"avoid":[{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"}],"tips":"2-3 upbeat styling sentences referencing specific brand fit philosophies where relevant."}. shape must be exactly one of: Hourglass, Pear, Apple, Rectangle, Inverted Triangle. CONFIDENCE RULES: You are an expert system — be decisive. confidence must be between 85 and 98. Use 92–98 when the body shape is clearly readable from the photo. Use 85–91 only when the image is low quality, heavily obscured, or genuinely ambiguous between two shapes. Never return a confidence below 85.`,
