@@ -17,7 +17,7 @@ We will build:
 - An Express API wrapped for AWS Lambda
 - A CloudFront distribution routing static assets and `/api/*` traffic
 - API Gateway (HTTP API) in front of the Lambda
-- Secrets Manager for the Anthropic API key
+- Anthropic API key passed to Lambda as an encrypted-at-rest environment variable
 - Optional WAF for public-facing rate limiting
 
 ### Request Routing Table
@@ -36,7 +36,7 @@ We will build:
 
 ### 1. CONFIGURE AWS CREDENTIALS
 
-We begin by configuring AWS CLI credentials with permissions to create CloudFront, Lambda, API Gateway, S3, Secrets Manager, and IAM resources.
+We begin by configuring AWS CLI credentials with permissions to create CloudFront, Lambda, API Gateway, S3, and IAM resources.
 
 ```
 aws configure --profile <your-profile>
