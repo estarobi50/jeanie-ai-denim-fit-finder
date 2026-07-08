@@ -148,17 +148,56 @@ export class JeanieStack extends cdk.Stack {
       ],
     }) : undefined;
 
+    // ── Basic Auth gate (optional) ─────────────────────────────────
+    // For sharing a test deploy without going fully public: set BASIC_AUTH_USER
+    // and BASIC_AUTH_PASS to gate the entire site (and API) behind a browser
+    // login prompt. Implemented as a CloudFront Function — runs at the edge
+    // before hitting S3 or API Gateway, effectively free at this volume.
+    // Credentials are embedded in the function's code (visible to anyone with
+    // CloudFront console access in this account), so treat this as a basic
+    // "keep casual visitors out" gate, not cryptographic security. Leave both
+    // env vars unset to deploy with no gate at all.
+    const basicAuthUser = process.env.BASIC_AUTH_USER;
+    const basicAuthPass = process.env.BASIC_AUTH_PASS;
+    let basicAuthFn: cf.Function | undefined;
+    if (basicAuthUser && basicAuthPass) {
+      const token = Buffer.from(`${basicAuthUser}:${basicAuthPass}`).toString('base64');
+      basicAuthFn = new cf.Function(this, 'BasicAuthFn', {
+        runtime: cf.FunctionRuntime.JS_2_0,
+        code: cf.FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  var expected = 'Basic ${token}';
+  var auth = request.headers.authorization && request.headers.authorization.value;
+  if (auth !== expected) {
+    return {
+      statusCode: 401,
+      statusDescription: 'Unauthorized',
+      headers: { 'www-authenticate': { value: 'Basic realm="Jeanie test access"' } },
+    };
+  }
+  return request;
+}
+        `.trim()),
+      });
+    }
+
     // ── CloudFront: static site default, /api/* routes to API Gateway ──
     const apiOrigin = new origins.HttpOrigin(
       `${httpApi.httpApiId}.execute-api.${this.region}.amazonaws.com`,
       { protocolPolicy: cf.OriginProtocolPolicy.HTTPS_ONLY },
     );
 
+    const basicAuthAssociation = basicAuthFn
+      ? [{ function: basicAuthFn, eventType: cf.FunctionEventType.VIEWER_REQUEST }]
+      : undefined;
+
     const distribution = new cf.Distribution(this, 'Cdn', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(siteBucket),
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
+        functionAssociations: basicAuthAssociation,
       },
       additionalBehaviors: {
         'api/*': {
@@ -167,6 +206,7 @@ export class JeanieStack extends cdk.Stack {
           allowedMethods: cf.AllowedMethods.ALLOW_ALL,
           cachePolicy: cf.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cf.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          functionAssociations: basicAuthAssociation,
         },
       },
       defaultRootObject: 'index.html',

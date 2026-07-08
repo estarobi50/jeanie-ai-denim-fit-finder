@@ -65,14 +65,15 @@
   <text x="789" y="315" text-anchor="middle" font-size="9" fill="#374151">x-api-key</text>
 
   <!-- Security notes box -->
-  <rect x="40" y="440" width="900" height="150" rx="10" fill="#f9fafb" stroke="#d1d5db" stroke-width="1"/>
+  <rect x="40" y="440" width="900" height="158" rx="10" fill="#f9fafb" stroke="#d1d5db" stroke-width="1"/>
   <text x="60" y="466" font-size="13" font-weight="700" fill="#111827">Request-path security</text>
 
   <text x="60" y="490" font-size="11" fill="#374151">1. Client sends X-Jeanie-Key header (baked into the bundle at build time) with every /api/claude call.</text>
   <text x="60" y="510" font-size="11" fill="#374151">2. Lambda's requireSiteKey middleware rejects requests missing or mismatching the header (401).</text>
   <text x="60" y="530" font-size="11" fill="#374151">3. express-rate-limit caps each Lambda instance to 10 req/min per IP before the request reaches Anthropic.</text>
   <text x="60" y="550" font-size="11" fill="#374151">4. Anthropic API key lives only in the Lambda's environment config — never sent to or readable by the browser.</text>
-  <text x="60" y="570" font-size="11" fill="#374151">5. Optional WAF (ENABLE_WAF=true) adds a CloudFront-level rate rule + AWS managed rule set for public traffic.</text>
+  <text x="60" y="570" font-size="11" fill="#374151">5. Optional WAF (flat-rate plan or ENABLE_WAF=true) adds CloudFront-level rate rules + AWS managed rule set.</text>
+  <text x="60" y="585" font-size="11" fill="#374151">6. Optional Basic Auth gate (BASIC_AUTH_USER/PASS): a CloudFront Function returns 401 on every request lacking the shared credentials.</text>
 
   <text x="490" y="608" text-anchor="middle" font-size="10" fill="#9ca3af">Single CDK stack, us-east-1 · jeanie-ai-denim-fit-finder</text>
 </svg>

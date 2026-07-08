@@ -21,6 +21,7 @@ We will build:
 - API Gateway (HTTP API) in front of the Lambda
 - Anthropic API key passed to Lambda as an encrypted-at-rest environment variable
 - WAF, either bundled via a CloudFront flat-rate pricing plan (can be $0/mo) or opt-in pay-as-you-go
+- An optional HTTP Basic Auth gate (CloudFront Function) for password-protecting test deploys
 
 ### Request Routing Table
 
@@ -140,6 +141,9 @@ CloudFront's newer per-distribution flat-rate plans (Free/Pro/Business/Premium) 
 
 **Right-Sizing Secret Storage for Volume**
 Secrets Manager costs a flat $0.40/mo per secret regardless of usage — real money at near-zero request volume. A Lambda environment variable is encrypted at rest by default and free, at the cost of losing rotation and a dedicated access audit trail. Below a couple hundred requests/month, that trade is worth making; above it, or for a production/public deploy, Secrets Manager's rotation support earns its cost back.
+
+**Edge Functions for Zero-Cost Access Gating**
+A pre-launch deploy can be password-protected without any backend changes: a CloudFront Function checking HTTP Basic Auth on `viewer-request` gates the whole distribution — static site and API alike — before requests ever reach an origin. It's opt-in via `BASIC_AUTH_USER`/`BASIC_AUTH_PASS` env vars at deploy time, free at test volumes (2M invocations/month included), and removed by redeploying with the vars unset. The credentials live in the function's code, so it deters casual visitors rather than determined attackers — the right tool for "share a test link," not production auth.
 
 ---
 

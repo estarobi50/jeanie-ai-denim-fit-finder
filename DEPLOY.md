@@ -70,6 +70,22 @@ npm run deploy
 ```
 Adds a rate-based rule (1000 req/5min/IP) and AWS's managed common rule set, at ~$6/mo. Ignored automatically if `CLOUDFRONT_WEB_ACL_ID` is set (Option A takes precedence).
 
+## Password-gating a test deploy (optional, $0)
+
+To share the deployed site with testers without making it fully public, set both of these in `.env` before deploying:
+
+```
+BASIC_AUTH_USER=tester
+BASIC_AUTH_PASS=<random value>   # e.g. node -e "console.log(require('crypto').randomBytes(6).toString('hex'))"
+```
+
+When both are set, `cdk deploy` creates a CloudFront Function that enforces HTTP Basic Auth at the edge on **every** request — the whole site and all `/api/*` routes — before anything reaches S3 or the Lambda. Visitors get a native browser login prompt; after entering the credentials once, the browser remembers them for the session and the app (including photo analysis) works normally.
+
+- **Cost:** $0 — CloudFront Functions include 2M free invocations/month, and they're bundled in flat-rate pricing plans anyway.
+- **Remove the gate** (go public): unset/blank both env vars and redeploy — the function and prompt disappear.
+- **Change the password:** edit `BASIC_AUTH_PASS` and redeploy.
+- **Caveat:** the credentials are embedded in the CloudFront Function's code, so anyone with CloudFront read access in the AWS account can see them. This is a "keep casual visitors out" gate for pre-launch testing, not cryptographic security.
+
 ## Local dev still works
 
 The Lambda wrapper is opt-in via `require.main`. Locally:
