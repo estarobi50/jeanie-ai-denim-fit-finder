@@ -10,7 +10,7 @@ Demo – digitalculture
 
 This project demonstrates the deployment of an **AI-powered body-shape and denim fit analyzer** on **AWS serverless infrastructure**.
 
-The application is a **React single-page app** backed by an **Express API** that calls the **Anthropic Claude API** to analyze a user's uploaded photo, classify their body shape against five archetypes, and recommend jean cuts and brands matched to that shape. The goal is to validate that the full request path — photo upload, AI analysis, brand recommendation, and click tracking — works end-to-end on a CDN-fronted serverless backend.
+The application is a **React single-page app** backed by an **Express API** that calls the **Anthropic Claude API** to analyze a user's uploaded photo, classify their body shape against five archetypes (separate taxonomies for women's and men's fit, selectable via a toggle), and recommend jean cuts and brands matched to that shape. The goal is to validate that the full request path — photo upload, AI analysis, brand recommendation, and click tracking — works end-to-end on a CDN-fronted serverless backend.
 
 ![Jeanie AWS architecture and request flow](docs/architecture.svg)
 
@@ -144,6 +144,9 @@ Secrets Manager costs a flat $0.40/mo per secret regardless of usage — real mo
 
 **Edge Functions for Zero-Cost Access Gating**
 A pre-launch deploy can be password-protected without any backend changes: a CloudFront Function checking HTTP Basic Auth on `viewer-request` gates the whole distribution — static site and API alike — before requests ever reach an origin. It's opt-in via `BASIC_AUTH_USER`/`BASIC_AUTH_PASS` env vars at deploy time, free at test volumes (2M invocations/month included), and removed by redeploying with the vars unset. The credentials live in the function's code, so it deters casual visitors rather than determined attackers — the right tool for "share a test link," not production auth.
+
+**Separate Taxonomies, Not a Shared One**
+Men's and women's body-shape frameworks use different archetype names and measurement vocabulary in the fashion industry — reusing the women's five shapes (Hourglass, Pear, Apple, Rectangle, Inverted Triangle) with "Bust" labels for men's analysis would misclassify typical male builds and read oddly in the UI. Jeanie defines a second five-archetype taxonomy for men (Trapezoid, Rectangle, Triangle, Inverted Triangle, Oval) with Chest/Waist/Hip labels, selected via a toggle that also switches which AI system prompt (and which shape enum, and which brand's product-line examples) is sent to Claude — the two categories share the same UI shell and Rectangle/Inverted Triangle icons where the concept genuinely overlaps, but nothing is silently reused where the underlying body-shape concept differs.
 
 ---
 

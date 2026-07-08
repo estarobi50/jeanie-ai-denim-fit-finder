@@ -35,22 +35,31 @@ const T = {
   denimDeep: "#0f1f3a",
 };
 
-const SHAPES = [
-  { id:"Hourglass",         accent:"#b8922a", desc:"Balanced shoulders and hips with a defined waist.", tips:"High-rise wide-leg or bootcut. Avoid shapeless boyfriend cuts." },
-  { id:"Pear",              accent:"#a04040", desc:"Narrower shoulders, fuller hips and thighs.", tips:"Dark-wash straight leg or flare. Avoid tapered ankle cuts." },
-  { id:"Apple",             accent:"#3a6090", desc:"Fuller midsection, slimmer legs.", tips:"Mid-rise straight or slim-straight. Avoid low-rise and super-skinny." },
-  { id:"Rectangle",         accent:"#5a7a5a", desc:"Uniform width — athletic build.", tips:"Embellished pockets or flares add curves. Avoid stiff rigid fits." },
-  { id:"Inverted Triangle", accent:"#7a5a8a", desc:"Broad shoulders, narrower hips.", tips:"Wide-leg or flared styles balance silhouette. Avoid skinny fits." },
+const SHAPES_WOMEN = [
+  { id:"Hourglass",         accent:"#b8922a", desc:"Balanced shoulders and hips with a defined waist.", tips:"High-rise wide-leg or bootcut. Avoid shapeless boyfriend cuts.",
+    params:{ sh:22, bu:22, wa:13, hi:22, label:["Bust","Waist","Hip"], ratio:"1:0.6:1" } },
+  { id:"Pear",              accent:"#a04040", desc:"Narrower shoulders, fuller hips and thighs.", tips:"Dark-wash straight leg or flare. Avoid tapered ankle cuts.",
+    params:{ sh:16, bu:18, wa:16, hi:26, label:["Narrow Bust","Waist","Full Hip"], ratio:"0.7:0.7:1" } },
+  { id:"Apple",             accent:"#3a6090", desc:"Fuller midsection, slimmer legs.", tips:"Mid-rise straight or slim-straight. Avoid low-rise and super-skinny.",
+    params:{ sh:22, bu:24, wa:26, hi:20, label:["Bust","Full Waist","Hip"], ratio:"1:1.1:0.9" } },
+  { id:"Rectangle",         accent:"#5a7a5a", desc:"Uniform width — athletic build.", tips:"Embellished pockets or flares add curves. Avoid stiff rigid fits.",
+    params:{ sh:20, bu:20, wa:20, hi:20, label:["Bust","Waist","Hip"], ratio:"1:1:1" } },
+  { id:"Inverted Triangle", accent:"#7a5a8a", desc:"Broad shoulders, narrower hips.", tips:"Wide-leg or flared styles balance silhouette. Avoid skinny fits.",
+    params:{ sh:28, bu:26, wa:16, hi:16, label:["Full Bust","Waist","Hip"], ratio:"1:0.6:0.6" } },
 ];
 
-/* ── Fashion figure params (half-widths from cx=50, viewBox 0 0 100 240) ── */
-const SHAPE_PARAMS = {
-  Hourglass:          { sh:22, bu:22, wa:13, hi:22, label:["Bust","Waist","Hip"], ratio:"1:0.6:1" },
-  Pear:               { sh:16, bu:18, wa:16, hi:26, label:["Narrow Bust","Waist","Full Hip"], ratio:"0.7:0.7:1" },
-  Apple:              { sh:22, bu:24, wa:26, hi:20, label:["Bust","Full Waist","Hip"], ratio:"1:1.1:0.9" },
-  Rectangle:          { sh:20, bu:20, wa:20, hi:20, label:["Bust","Waist","Hip"], ratio:"1:1:1" },
-  "Inverted Triangle":{ sh:28, bu:26, wa:16, hi:16, label:["Full Bust","Waist","Hip"], ratio:"1:0.6:0.6" },
-};
+const SHAPES_MEN = [
+  { id:"Trapezoid",         accent:"#4a6a8a", desc:"Broad shoulders tapering to a narrower waist — classic athletic build.", tips:"Straight or slim-straight balances the frame. Avoid super-skinny cuts that over-exaggerate the taper.",
+    params:{ sh:26, bu:22, wa:14, hi:18, label:["Chest","Waist","Hip"], ratio:"1:0.6:0.8" } },
+  { id:"Rectangle",         accent:"#5a7a5a", desc:"Uniform width shoulders-to-hips — lean, straight build.", tips:"Straight or tapered adds shape. Avoid overly baggy fits that hide the frame.",
+    params:{ sh:20, bu:20, wa:20, hi:20, label:["Chest","Waist","Hip"], ratio:"1:1:1" } },
+  { id:"Triangle",          accent:"#a04040", desc:"Narrower shoulders, fuller waist and hips.", tips:"Straight-leg or bootcut balances proportions. Avoid skinny fits that emphasize the hips.",
+    params:{ sh:16, bu:16, wa:18, hi:24, label:["Chest","Waist","Full Hip"], ratio:"0.7:0.8:1" } },
+  { id:"Inverted Triangle", accent:"#7a5a8a", desc:"Broad shoulders and chest, narrower waist and hips.", tips:"Straight or relaxed-straight balances the upper body. Avoid tapered skinny fits.",
+    params:{ sh:28, bu:26, wa:16, hi:16, label:["Full Chest","Waist","Hip"], ratio:"1:0.6:0.6" } },
+  { id:"Oval",              accent:"#3a6090", desc:"Fuller midsection, slimmer legs.", tips:"Relaxed or straight mid-rise skims the waist. Avoid low-rise and skinny fits.",
+    params:{ sh:20, bu:22, wa:26, hi:18, label:["Chest","Full Waist","Hip"], ratio:"1:1.1:0.9" } },
+];
 
 /* ── Jeans style SVG paths (viewBox 0 0 60 120) ─────────── */
 // Women's skinny — narrow fitted legs tapering to ankle
@@ -531,6 +540,34 @@ function ShapeIcon({ shapeId, accent, size = 48 }) {
       </svg>
     );
   }
+  if (shapeId === "Oval") {
+    // An oval — rounded midsection, the men's-taxonomy equivalent of Apple
+    return (
+      <svg viewBox="0 0 96 96" width={size} height={size} aria-hidden>
+        <defs>{gradDef}</defs>
+        <ellipse cx="48" cy="50" rx="26" ry="34" fill={`url(#${gradId})`}/>
+        <ellipse cx="48" cy="50" rx="26" ry="34" fill="none" stroke={accent} strokeWidth="1.5" opacity="0.4"/>
+      </svg>
+    );
+  }
+  if (shapeId === "Triangle") {
+    // Point-up triangle — narrow shoulders, wide base at the hips
+    return (
+      <svg viewBox="0 0 96 96" width={size} height={size} aria-hidden>
+        <defs>{gradDef}</defs>
+        <path d="M48,12 C66,46 78,66 78,80 L18,80 C18,66 30,46 48,12 Z" fill={`url(#${gradId})`}/>
+      </svg>
+    );
+  }
+  if (shapeId === "Trapezoid") {
+    // Wide at the top (shoulders), narrowing toward the base (waist/hips)
+    return (
+      <svg viewBox="0 0 96 96" width={size} height={size} aria-hidden>
+        <defs>{gradDef}</defs>
+        <path d="M14,16 L82,16 L64,80 L32,80 Z" fill={`url(#${gradId})`}/>
+      </svg>
+    );
+  }
   // Inverted Triangle — point down triangle
   return (
     <svg viewBox="0 0 96 96" width={size} height={size} aria-hidden>
@@ -545,7 +582,7 @@ function ShapeCard({ shape, active, index = 0 }) {
   const [hover, setHover] = useState(false);
   const lifted = hover || active;
   const acc = shape.accent || T.accent;
-  const params = SHAPE_PARAMS[shape.id] || SHAPE_PARAMS.Rectangle;
+  const params = shape.params;
 
   return (
     <div
@@ -770,7 +807,9 @@ export default function Jeanie() {
   const [scanProg,      setScanProg]      = useState(0);
   const [scanPhase,     setScanPhase]     = useState(0);
   const [scanDone,      setScanDone]      = useState(false);
+  const [fitCategory,   setFitCategory]   = useState("women"); // "women" | "men" — drives shape taxonomy, labels, and AI prompts
   const pendingResult = useRef(null);
+  const activeShapes = fitCategory === "men" ? SHAPES_MEN : SHAPES_WOMEN;
   const mob = useMobile();
   const fileRef = useRef();
   const cameraRef = useRef();
@@ -834,8 +873,10 @@ export default function Jeanie() {
         method:"POST", headers: CLAUDE_HEADERS,
         body: JSON.stringify({
           model:"claude-sonnet-4-5-20250929", max_tokens:1200,
-          system:`You are Jeanie, a denim fit-AI whose knowledge is built exclusively from the design philosophies, fit systems, wash expertise, and sizing data of ten iconic denim brands: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, and Abercrombie & Fitch. You recommend ONLY from these ten brands. Given a body shape and recommended jean styles, return ONLY a raw JSON array — no markdown, no backticks, no prose. Return exactly 6 brand objects chosen from those 10 brands (no other brands). For each brand, name ONE real, currently-sold, well-known product line from that brand's actual denim lineup (e.g. Levi's 501 Original, Levi's Ribcage Straight, Gap '90s Loose, Gap Modern Bootcut, American Eagle Curvy Straight, American Eagle Mom Jean, Abercrombie Curve Love, Abercrombie 90s Straight Ultra High Rise, Wrangler Retro Slim, Lee Legendary Bootcut, Guess Sexy Curve Skinny, Mavi Kerry, Diesel Slandy, 7FAM Ellie Straight) — this must be a real product name, not invented. Schema: [{"brand":"Brand Name","productName":"Real Product Line Name","tier":"Luxury"|"Premium"|"Mid-Range"|"Budget","tagline":"One punchy brand tagline unique to that brand.","bestFor":"Which recommended style they excel at for this shape.","priceRange":"$XX–$XXX","whyItWorks":"1–2 sentences grounded in that brand's specific fit system or signature technology and why THIS product suits this body shape.","url":"https://www.brandwebsite.com"}]. Tier guide: 7 For All Mankind & Diesel = Luxury; Mavi & Guess = Premium; Levi's & Gap & Abercrombie & Fitch & American Eagle = Mid-Range; Lee & Wrangler = Budget. Include a good mix of tiers. Only these 10 brands, no exceptions.`,
-          messages:[{ role:"user", content:`Body shape: ${fitResult.shape}. Recommended styles: ${fitResult.recommendations.map(r => r.style).join(", ")}. Return the 6 best jean brand + real product recommendations as a JSON array only, chosen exclusively from: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, Abercrombie & Fitch.` }],
+          system: fitCategory === "men"
+            ? `You are Jeanie, a denim fit-AI whose knowledge is built exclusively from the design philosophies, fit systems, wash expertise, and sizing data of ten iconic denim brands: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, and Abercrombie & Fitch. You recommend ONLY from these ten brands, and ONLY men's jeans. Given a body shape and recommended jean styles, return ONLY a raw JSON array — no markdown, no backticks, no prose. Return exactly 6 brand objects chosen from those 10 brands (no other brands). For each brand, name ONE real, currently-sold, well-known MEN'S product line from that brand's actual denim lineup (e.g. Levi's 501 Original, Levi's 511 Slim, Gap Modern Athletic Taper, Gap Straight, American Eagle AirFlex+ Slim, American Eagle Relaxed Straight, Abercrombie Athletic Skinny, Abercrombie Slim Straight, Wrangler Retro Slim, Lee Extreme Motion Straight, Guess Slim Tapered, Mavi Jake Slim, Diesel Larkee Relaxed, 7FAM Adrien Slim Taper) — this must be a real product name, not invented. Schema: [{"brand":"Brand Name","productName":"Real Product Line Name","tier":"Luxury"|"Premium"|"Mid-Range"|"Budget","tagline":"One punchy brand tagline unique to that brand.","bestFor":"Which recommended style they excel at for this shape.","priceRange":"$XX–$XXX","whyItWorks":"1–2 sentences grounded in that brand's specific fit system or signature technology and why THIS product suits this body shape.","url":"https://www.brandwebsite.com"}]. Tier guide: 7 For All Mankind & Diesel = Luxury; Mavi & Guess = Premium; Levi's & Gap & Abercrombie & Fitch & American Eagle = Mid-Range; Lee & Wrangler = Budget. Include a good mix of tiers. Only these 10 brands, no exceptions.`
+            : `You are Jeanie, a denim fit-AI whose knowledge is built exclusively from the design philosophies, fit systems, wash expertise, and sizing data of ten iconic denim brands: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, and Abercrombie & Fitch. You recommend ONLY from these ten brands, and ONLY women's jeans. Given a body shape and recommended jean styles, return ONLY a raw JSON array — no markdown, no backticks, no prose. Return exactly 6 brand objects chosen from those 10 brands (no other brands). For each brand, name ONE real, currently-sold, well-known WOMEN'S product line from that brand's actual denim lineup (e.g. Levi's 501 Original, Levi's Ribcage Straight, Gap '90s Loose, Gap Modern Bootcut, American Eagle Curvy Straight, American Eagle Mom Jean, Abercrombie Curve Love, Abercrombie 90s Straight Ultra High Rise, Wrangler Retro Slim, Lee Legendary Bootcut, Guess Sexy Curve Skinny, Mavi Kerry, Diesel Slandy, 7FAM Ellie Straight) — this must be a real product name, not invented. Schema: [{"brand":"Brand Name","productName":"Real Product Line Name","tier":"Luxury"|"Premium"|"Mid-Range"|"Budget","tagline":"One punchy brand tagline unique to that brand.","bestFor":"Which recommended style they excel at for this shape.","priceRange":"$XX–$XXX","whyItWorks":"1–2 sentences grounded in that brand's specific fit system or signature technology and why THIS product suits this body shape.","url":"https://www.brandwebsite.com"}]. Tier guide: 7 For All Mankind & Diesel = Luxury; Mavi & Guess = Premium; Levi's & Gap & Abercrombie & Fitch & American Eagle = Mid-Range; Lee & Wrangler = Budget. Include a good mix of tiers. Only these 10 brands, no exceptions.`,
+          messages:[{ role:"user", content:`Body shape: ${fitResult.shape} (${fitCategory}'s fit). Recommended styles: ${fitResult.recommendations.map(r => r.style).join(", ")}. Return the 6 best ${fitCategory}'s jean brand + real product recommendations as a JSON array only, chosen exclusively from: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, Abercrombie & Fitch.` }],
         }),
       });
       const data = await res.json();
@@ -862,14 +903,17 @@ export default function Jeanie() {
       let raw_brands = JSON.parse(m[0]).map(b => ({ ...b, url: buildUrl(b.brand) || b.url }));
 
       // Guarantee A&F always appears
+      const anfProductName = fitCategory === "men" ? "Slim Straight" : "Curve Love";
       const ANF_DEFAULT = {
         brand: "Abercrombie & Fitch",
-        productName: "Curve Love",
+        productName: anfProductName,
         tier: "Mid-Range",
         tagline: "Denim engineered for real bodies.",
         bestFor: fitResult.recommendations[0]?.style || "Straight",
         priceRange: "$60–$120",
-        whyItWorks: `Abercrombie's Curve Love fit is cut with extra room through the hip and thigh, making it a strong match for the ${fitResult.shape} shape.`,
+        whyItWorks: fitCategory === "men"
+          ? `Abercrombie's Slim Straight fit tapers cleanly through the leg while leaving room through the seat and thigh, making it a strong match for the ${fitResult.shape} shape.`
+          : `Abercrombie's Curve Love fit is cut with extra room through the hip and thigh, making it a strong match for the ${fitResult.shape} shape.`,
         url: buildUrl("Abercrombie & Fitch"),
       };
       if (!raw_brands.some(b => b.brand === "Abercrombie & Fitch")) {
@@ -900,10 +944,12 @@ export default function Jeanie() {
         method:"POST", headers: CLAUDE_HEADERS,
         body: JSON.stringify({
           model:"claude-sonnet-4-5-20250929", max_tokens:1000,
-          system:`You are Jeanie, a denim fit-AI trained on the collective wisdom of eight iconic denim brands — Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, and 7 For All Mankind. Your style knowledge draws from Levi's taper expertise, Wrangler's western cut heritage, Lee's relaxed fit innovation, Gap's clean straight-leg tradition, Guess' curve-flattering premium denim, Mavi's Shaping Technology, Diesel's avant-garde silhouettes, and 7 For All Mankind's Body Contour series. Look at the photo and return ONLY a raw JSON object — no markdown, no backticks, no prose. Schema: {"shape":"Hourglass","confidence":92,"shapeDesc":"Short description.","traits":["t1","t2","t3"],"recommendations":[{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"}],"avoid":[{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"}],"tips":"2-3 upbeat styling sentences referencing specific brand fit philosophies where relevant."}. shape must be exactly one of: Hourglass, Pear, Apple, Rectangle, Inverted Triangle. CONFIDENCE RULES: You are an expert system — be decisive. confidence must be between 85 and 98. Use 92–98 when the body shape is clearly readable from the photo. Use 85–91 only when the image is low quality, heavily obscured, or genuinely ambiguous between two shapes. Never return a confidence below 85.`,
+          system: fitCategory === "men"
+            ? `You are Jeanie, a denim fit-AI trained on the collective wisdom of eight iconic denim brands — Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, and 7 For All Mankind. Your style knowledge draws from Levi's taper expertise, Wrangler's western cut heritage, Lee's relaxed fit innovation, Gap's clean straight-leg tradition, Guess' athletic-tapered fits, Mavi's Jake/Marcus fit systems, Diesel's avant-garde silhouettes, and 7 For All Mankind's tailored straight fits. Look at the photo of a man and return ONLY a raw JSON object — no markdown, no backticks, no prose. Schema: {"shape":"Trapezoid","confidence":92,"shapeDesc":"Short description.","traits":["t1","t2","t3"],"recommendations":[{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"}],"avoid":[{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"}],"tips":"2-3 upbeat styling sentences referencing specific brand fit philosophies where relevant."}. shape must be exactly one of: Trapezoid, Rectangle, Triangle, Inverted Triangle, Oval — using men's body-shape terminology (Trapezoid = broad shoulders tapering to narrower waist; Triangle = narrower shoulders, fuller waist/hips; Inverted Triangle = broad shoulders and chest, narrow waist/hips; Oval = fuller midsection, slimmer legs; Rectangle = uniform width). CONFIDENCE RULES: You are an expert system — be decisive. confidence must be between 85 and 98. Use 92–98 when the body shape is clearly readable from the photo. Use 85–91 only when the image is low quality, heavily obscured, or genuinely ambiguous between two shapes. Never return a confidence below 85.`
+            : `You are Jeanie, a denim fit-AI trained on the collective wisdom of eight iconic denim brands — Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, and 7 For All Mankind. Your style knowledge draws from Levi's taper expertise, Wrangler's western cut heritage, Lee's relaxed fit innovation, Gap's clean straight-leg tradition, Guess' curve-flattering premium denim, Mavi's Shaping Technology, Diesel's avant-garde silhouettes, and 7 For All Mankind's Body Contour series. Look at the photo of a woman and return ONLY a raw JSON object — no markdown, no backticks, no prose. Schema: {"shape":"Hourglass","confidence":92,"shapeDesc":"Short description.","traits":["t1","t2","t3"],"recommendations":[{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"}],"avoid":[{"style":"Name","reason":"Why"},{"style":"Name","reason":"Why"}],"tips":"2-3 upbeat styling sentences referencing specific brand fit philosophies where relevant."}. shape must be exactly one of: Hourglass, Pear, Apple, Rectangle, Inverted Triangle. CONFIDENCE RULES: You are an expert system — be decisive. confidence must be between 85 and 98. Use 92–98 when the body shape is clearly readable from the photo. Use 85–91 only when the image is low quality, heavily obscured, or genuinely ambiguous between two shapes. Never return a confidence below 85.`,
           messages:[{ role:"user", content:[
             { type:"image", source:{ type:"base64", media_type:imgMime, data:imgB64 } },
-            { type:"text", text:"Analyze the body shape and return ONLY the JSON — no other text." },
+            { type:"text", text: `Analyze the body shape (this is a photo of a ${fitCategory === "men" ? "man" : "woman"}) and return ONLY the JSON — no other text.` },
           ]}],
         }),
       });
@@ -1218,6 +1264,26 @@ export default function Jeanie() {
                 <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, letterSpacing:"0.22em", color:T.accent, textTransform:"uppercase", flexShrink:0, cursor:"default" }}>Pro tip</span>
               </Tooltip>
               <span style={{ fontSize:13, color:T.inkSoft, fontWeight:300 }}>Full-body photo, fitted clothing, straight posture, good light → most accurate read.</span>
+            </div>
+          </FadeIn>
+
+          <FadeIn delay={0.07}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, letterSpacing:"0.16em", color:T.mute, textTransform:"uppercase" }}>Analyzing for</span>
+              <div style={{ display:"inline-flex", padding:4, borderRadius:999, background:T.surfaceB, border:`1px solid ${T.border}`, gap:2 }}>
+                {[{ id:"women", label:"Women's Fit" }, { id:"men", label:"Men's Fit" }].map(opt => (
+                  <button key={opt.id} onClick={() => setFitCategory(opt.id)}
+                    style={{
+                      padding:"7px 16px", borderRadius:999, border:"none", cursor:"pointer",
+                      fontFamily:"'JetBrains Mono',monospace", fontSize:10, letterSpacing:"0.05em", fontWeight:500,
+                      background: fitCategory === opt.id ? T.accent : "transparent",
+                      color: fitCategory === opt.id ? "#fff" : T.inkSoft,
+                      transition:"background 0.25s, color 0.25s",
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </FadeIn>
 
@@ -1604,8 +1670,28 @@ export default function Jeanie() {
           <FadeIn>
             <SectionHead eyebrow="03 · Body archetypes" title={<>The five shapes,<br/>visualized.</>} n="03"/>
           </FadeIn>
+
+          <FadeIn delay={0.05}>
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:32 }}>
+              <div style={{ display:"inline-flex", padding:4, borderRadius:999, background:T.surfaceB, border:`1px solid ${T.border}`, gap:2 }}>
+                {[{ id:"women", label:"Women's Fit" }, { id:"men", label:"Men's Fit" }].map(opt => (
+                  <button key={opt.id} onClick={() => setFitCategory(opt.id)}
+                    style={{
+                      padding:"10px 22px", borderRadius:999, border:"none", cursor:"pointer",
+                      fontFamily:"'JetBrains Mono',monospace", fontSize:11, letterSpacing:"0.06em", fontWeight:500,
+                      background: fitCategory === opt.id ? T.accent : "transparent",
+                      color: fitCategory === opt.id ? "#fff" : T.inkSoft,
+                      transition:"background 0.25s, color 0.25s",
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+
           <div style={{ display:"grid", gridTemplateColumns: mob ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(220px, 1fr))", gap:16 }}>
-            {SHAPES.map((sh, i) => (
+            {activeShapes.map((sh, i) => (
               <FadeIn key={sh.id} delay={i * 0.06}>
                 <ShapeCard shape={sh} active={result?.shape === sh.id} index={i}/>
               </FadeIn>
