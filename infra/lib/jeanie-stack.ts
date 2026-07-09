@@ -45,13 +45,16 @@ export class JeanieStack extends cdk.Stack {
     // the old Code.fromAsset approach included react/react-scripts's node_modules
     // and blew past Lambda's 250MB unzipped limit.
     const apiFn = new NodejsFunction(this, 'ApiFn', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      // Node 20.x reached AWS Lambda end-of-life — bumped to 24.x (matches
+      // local dev's Node version too, so behavior stays consistent between
+      // `node server.js` locally and the deployed Lambda).
+      runtime: lambda.Runtime.NODEJS_24_X,
       entry: path.join(__dirname, '..', '..', 'lambda', 'handler.js'),
       handler: 'handler',
       projectRoot: path.join(__dirname, '..', '..'),
       depsLockFilePath: path.join(__dirname, '..', '..', 'package-lock.json'),
       bundling: {
-        // AWS SDK v3 ships built into the Node 18/20 Lambda runtime already.
+        // AWS SDK v3 ships built into the Node Lambda runtime already.
         externalModules: ['@aws-sdk/*'],
       },
       memorySize: 512,
