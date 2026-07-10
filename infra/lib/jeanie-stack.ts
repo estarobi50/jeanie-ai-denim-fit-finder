@@ -151,35 +151,98 @@ export class JeanieStack extends cdk.Stack {
       ],
     }) : undefined;
 
-    // ── Basic Auth gate (optional) ─────────────────────────────────
-    // For sharing a test deploy without going fully public: set BASIC_AUTH_USER
-    // and BASIC_AUTH_PASS to gate the entire site (and API) behind a browser
-    // login prompt. Implemented as a CloudFront Function — runs at the edge
+    // ── Custom sign-in gate (optional) ──────────────────────────────
+    // For sharing a test deploy without going fully public: set BASIC_AUTH_PASS
+    // to gate the entire site (and API) behind a branded sign-in page (Jeanie
+    // logo, single access-code field) instead of the browser's native Basic
+    // Auth dialog. Implemented as a CloudFront Function — runs at the edge
     // before hitting S3 or API Gateway, effectively free at this volume.
-    // Credentials are embedded in the function's code (visible to anyone with
-    // CloudFront console access in this account), so treat this as a basic
-    // "keep casual visitors out" gate, not cryptographic security. Leave both
-    // env vars unset to deploy with no gate at all.
-    const basicAuthUser = process.env.BASIC_AUTH_USER;
+    //
+    // Flow: no/invalid `jeanie_auth` cookie → serve the branded HTML page
+    // (401, no www-authenticate header, so no native browser prompt appears).
+    // The page's <form> GETs /__unlock?key=... ; a matching key sets the
+    // cookie (24h) and redirects to /. Every request after that carries the
+    // cookie automatically (same-origin fetch includes cookies by default).
+    //
+    // The access code is embedded in the function's code (visible to anyone
+    // with CloudFront console access in this account) and sent as a URL query
+    // param on unlock, so treat this as a "keep casual visitors out" gate,
+    // not cryptographic security — same trust model as the Basic Auth version
+    // it replaces. Leave BASIC_AUTH_PASS unset to deploy with no gate at all.
     const basicAuthPass = process.env.BASIC_AUTH_PASS;
     let basicAuthFn: cf.Function | undefined;
-    if (basicAuthUser && basicAuthPass) {
-      const token = Buffer.from(`${basicAuthUser}:${basicAuthPass}`).toString('base64');
-      basicAuthFn = new cf.Function(this, 'BasicAuthFn', {
+    if (basicAuthPass) {
+      const escaped = basicAuthPass.replace(/'/g, "\\'");
+      basicAuthFn = new cf.Function(this, 'SignInFn', {
         runtime: cf.FunctionRuntime.JS_2_0,
         code: cf.FunctionCode.fromInline(`
 function handler(event) {
   var request = event.request;
-  var expected = 'Basic ${token}';
-  var auth = request.headers.authorization && request.headers.authorization.value;
-  if (auth !== expected) {
-    return {
-      statusCode: 401,
-      statusDescription: 'Unauthorized',
-      headers: { 'www-authenticate': { value: 'Basic realm="Jeanie test access"' } },
-    };
+  var expected = '${escaped}';
+  var cookies = request.cookies || {};
+  var authed = cookies.jeanie_auth && cookies.jeanie_auth.value === expected;
+
+  if (authed) {
+    return request;
   }
-  return request;
+
+  if (request.uri === '/__unlock') {
+    var qs = request.querystring || {};
+    var key = qs.key && qs.key.value;
+    if (key === expected) {
+      return {
+        statusCode: 302,
+        statusDescription: 'Found',
+        headers: { location: { value: '/' } },
+        cookies: {
+          jeanie_auth: { value: expected, attributes: 'Path=/; Max-Age=86400; Secure; HttpOnly; SameSite=Lax' },
+        },
+      };
+    }
+  }
+
+  var failed = request.uri === '/__unlock';
+  var errBlock = failed
+    ? '<div class="err">Incorrect access code. Try again.</div>'
+    : '';
+  var html = '<!DOCTYPE html><html lang="en"><head>'
+    + '<meta charset="utf-8"/>'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1"/>'
+    + '<title>jeanie &middot; Sign in</title>'
+    + '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    + '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">'
+    + '<style>'
+    + '*{box-sizing:border-box}'
+    + 'html{-webkit-text-size-adjust:100%;}'
+    + 'body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#f7f4ef;font-family:\\'JetBrains Mono\\',monospace;padding:20px;}'
+    + '.card{background:#fff;border:1px solid rgba(28,18,8,0.09);border-radius:20px;padding:48px 40px;max-width:360px;width:100%;box-shadow:0 4px 24px -4px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.05);text-align:center;}'
+    + '.logo{display:flex;align-items:baseline;justify-content:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}'
+    + '.logo .wordmark{font-family:\\'Cormorant Garamond\\',serif;font-weight:600;font-style:italic;font-size:34px;letter-spacing:-0.04em;color:#18110a;}'
+    + '.logo .tag{font-family:\\'JetBrains Mono\\',monospace;font-size:9px;font-weight:500;letter-spacing:0.22em;color:#9a7828;text-transform:uppercase;border-left:1px solid rgba(28,18,8,0.09);padding-left:8px;}'
+    + '.sub{font-size:11px;color:#8a7060;letter-spacing:0.14em;margin-bottom:32px;text-transform:uppercase;}'
+    // 16px avoids iOS Safari's auto-zoom-on-focus for inputs under 16px.
+    + 'input[type=password]{width:100%;padding:14px 16px;border-radius:12px;border:1px solid rgba(28,18,8,0.14);font-family:\\'JetBrains Mono\\',monospace;font-size:16px;letter-spacing:0.06em;margin-bottom:16px;background:#f7f4ef;color:#18110a;outline:none;-webkit-appearance:none;appearance:none;}'
+    + 'input[type=password]:focus{border-color:#9a7828;}'
+    + 'button{width:100%;padding:15px;border-radius:12px;border:none;background:#9a7828;color:#fff;font-family:\\'JetBrains Mono\\',monospace;font-size:12px;letter-spacing:0.10em;text-transform:uppercase;font-weight:500;cursor:pointer;-webkit-appearance:none;appearance:none;}'
+    + '@media (max-width:420px){.card{padding:36px 24px;border-radius:16px;}.logo .wordmark{font-size:28px;}.sub{font-size:10px;margin-bottom:26px;}}'
+    + 'button:hover{background:#c8a64b;}'
+    + '.err{color:#b8302c;font-size:11px;letter-spacing:0.05em;margin:-8px 0 16px;}'
+    + '</style></head><body>'
+    + '<div class="card">'
+    + '<div class="logo"><span class="wordmark">jeanie</span><span class="tag">Fit&middot;AI</span></div>'
+    + '<div class="sub">Private preview &middot; enter access code</div>'
+    + errBlock
+    + '<form method="GET" action="/__unlock">'
+    + '<input type="password" name="key" placeholder="Access code" autofocus required/>'
+    + '<button type="submit">Enter</button>'
+    + '</form></div></body></html>';
+
+  return {
+    statusCode: 401,
+    statusDescription: 'Unauthorized',
+    headers: { 'content-type': { value: 'text/html; charset=utf-8' } },
+    body: { encoding: 'text', data: html },
+  };
 }
         `.trim()),
       });

@@ -72,19 +72,18 @@ Adds a rate-based rule (1000 req/5min/IP) and AWS's managed common rule set, at 
 
 ## Password-gating a test deploy (optional, $0)
 
-To share the deployed site with testers without making it fully public, set both of these in `.env` before deploying:
+To share the deployed site with testers without making it fully public, set this in `.env` before deploying:
 
 ```
-BASIC_AUTH_USER=tester
 BASIC_AUTH_PASS=<random value>   # e.g. node -e "console.log(require('crypto').randomBytes(6).toString('hex'))"
 ```
 
-When both are set, `cdk deploy` creates a CloudFront Function that enforces HTTP Basic Auth at the edge on **every** request — the whole site and all `/api/*` routes — before anything reaches S3 or the Lambda. Visitors get a native browser login prompt; after entering the credentials once, the browser remembers them for the session and the app (including photo analysis) works normally.
+When set, `cdk deploy` creates a CloudFront Function that gates **every** request — the whole site and all `/api/*` routes — before anything reaches S3 or the Lambda. Instead of the browser's native Basic Auth dialog, visitors see a custom-branded sign-in page (Jeanie's "jeanie Fit·AI" wordmark, a single access-code field). Entering the correct code sets a 24-hour cookie and redirects to the site; the app (including photo analysis) works normally from there since same-origin `fetch` calls automatically carry the cookie.
 
 - **Cost:** $0 — CloudFront Functions include 2M free invocations/month, and they're bundled in flat-rate pricing plans anyway.
-- **Remove the gate** (go public): unset/blank both env vars and redeploy — the function and prompt disappear.
-- **Change the password:** edit `BASIC_AUTH_PASS` and redeploy.
-- **Caveat:** the credentials are embedded in the CloudFront Function's code, so anyone with CloudFront read access in the AWS account can see them. This is a "keep casual visitors out" gate for pre-launch testing, not cryptographic security.
+- **Remove the gate** (go public): unset/blank `BASIC_AUTH_PASS` and redeploy — the function and sign-in page disappear.
+- **Change the access code:** edit `BASIC_AUTH_PASS` and redeploy. Anyone with an old cookie stays logged in until it expires (24h) or is cleared, since the check is a value match, not a lookup — mention this if you rotate the code for security reasons, not just convenience.
+- **Caveat:** the access code is embedded in the CloudFront Function's code (visible to anyone with CloudFront console access in this account) and sent as a URL query parameter on unlock. This is a "keep casual visitors out" gate for pre-launch testing, not cryptographic security — same trust model as the Basic Auth version it replaced.
 
 ## Local dev still works
 
