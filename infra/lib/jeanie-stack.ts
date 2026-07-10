@@ -195,7 +195,7 @@ function handler(event) {
         statusDescription: 'Found',
         headers: { location: { value: '/' } },
         cookies: {
-          jeanie_auth: { value: expected, attributes: 'Path=/; Max-Age=86400; Secure; HttpOnly; SameSite=Lax' },
+          jeanie_auth: { value: expected, attributes: 'Path=/; Max-Age=10800; Secure; HttpOnly; SameSite=Lax' },
         },
       };
     }

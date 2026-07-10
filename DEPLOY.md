@@ -78,11 +78,11 @@ To share the deployed site with testers without making it fully public, set this
 BASIC_AUTH_PASS=<random value>   # e.g. node -e "console.log(require('crypto').randomBytes(6).toString('hex'))"
 ```
 
-When set, `cdk deploy` creates a CloudFront Function that gates **every** request — the whole site and all `/api/*` routes — before anything reaches S3 or the Lambda. Instead of the browser's native Basic Auth dialog, visitors see a custom-branded sign-in page (Jeanie's "jeanie Fit·AI" wordmark, a single access-code field). Entering the correct code sets a 24-hour cookie and redirects to the site; the app (including photo analysis) works normally from there since same-origin `fetch` calls automatically carry the cookie.
+When set, `cdk deploy` creates a CloudFront Function that gates **every** request — the whole site and all `/api/*` routes — before anything reaches S3 or the Lambda. Instead of the browser's native Basic Auth dialog, visitors see a custom-branded sign-in page (Jeanie's "jeanie Fit·AI" wordmark, a single access-code field). Entering the correct code sets a 3-hour cookie (`Max-Age=10800` in `infra/lib/jeanie-stack.ts`, adjust there if you want a different session length) and redirects to the site; the app (including photo analysis) works normally from there since same-origin `fetch` calls automatically carry the cookie.
 
 - **Cost:** $0 — CloudFront Functions include 2M free invocations/month, and they're bundled in flat-rate pricing plans anyway.
 - **Remove the gate** (go public): unset/blank `BASIC_AUTH_PASS` and redeploy — the function and sign-in page disappear.
-- **Change the access code:** edit `BASIC_AUTH_PASS` and redeploy. Anyone with an old cookie stays logged in until it expires (24h) or is cleared, since the check is a value match, not a lookup — mention this if you rotate the code for security reasons, not just convenience.
+- **Change the access code:** edit `BASIC_AUTH_PASS` and redeploy. Anyone with an old cookie stays logged in until it expires (3h) or is cleared, since the check is a value match, not a lookup — mention this if you rotate the code for security reasons, not just convenience.
 - **Caveat:** the access code is embedded in the CloudFront Function's code (visible to anyone with CloudFront console access in this account) and sent as a URL query parameter on unlock. This is a "keep casual visitors out" gate for pre-launch testing, not cryptographic security — same trust model as the Basic Auth version it replaced.
 
 ## Local dev still works
