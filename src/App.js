@@ -61,6 +61,111 @@ const SHAPES_MEN = [
     params:{ sh:20, bu:22, wa:26, hi:18, label:["Chest","Full Waist","Hip"], ratio:"1:1.1:0.9" } },
 ];
 
+// Brand homepages only — see BRAND_URLS note in fetchBrands for why deep
+// product/category links aren't used (they rot: wrong locale, 404s, bot-
+// blocked verification). Shared by both the catalog below and fetchBrands.
+const BRAND_HOMEPAGES = {
+  "Levi's":              "https://www.levi.com",
+  "Wrangler":            "https://www.wrangler.com",
+  "Lee":                 "https://www.lee.com",
+  "Gap":                 "https://www.gap.com",
+  "Guess":               "https://www.guess.com",
+  "Mavi":                "https://www.mavi.com",
+  "Diesel":              "https://www.diesel.com",
+  "7 For All Mankind":   "https://www.7forallmankind.com",
+  "American Eagle":      "https://www.ae.com",
+  "Abercrombie & Fitch": "https://www.abercrombie.com",
+};
+const BRAND_TIERS = {
+  "7 For All Mankind": "Luxury", "Diesel": "Luxury",
+  "Mavi": "Premium", "Guess": "Premium",
+  "Levi's": "Mid-Range", "Gap": "Mid-Range", "American Eagle": "Mid-Range", "Abercrombie & Fitch": "Mid-Range",
+  "Lee": "Budget", "Wrangler": "Budget",
+};
+const TIER_PRICE_RANGE = {
+  Luxury: "$150–$350", Premium: "$80–$150", "Mid-Range": "$50–$120", Budget: "$30–$70",
+};
+
+// ── Curated product catalog ─────────────────────────────────────
+// Real, long-established product lines per brand, tagged by which body-shape
+// archetypes they suit. This is the ground truth Claude selects FROM in
+// fetchBrands() — it never invents a brand, product name, tier, or URL; it
+// only picks candidates from this list and writes the persuasive copy
+// (tagline / bestFor / whyItWorks). Fixes the hallucinated-product-name
+// problem at the source instead of just working around broken links.
+const PRODUCT_CATALOG = [
+  // ── Levi's ──
+  { brand:"Levi's", productName:"501 Original", gender:"women", tags:["Rectangle","Apple"] },
+  { brand:"Levi's", productName:"Ribcage Straight", gender:"women", tags:["Hourglass","Apple"] },
+  { brand:"Levi's", productName:"'70s High Flare", gender:"women", tags:["Hourglass","Inverted Triangle","Pear"] },
+  { brand:"Levi's", productName:"501 Original", gender:"men", tags:["Rectangle","Trapezoid"] },
+  { brand:"Levi's", productName:"511 Slim", gender:"men", tags:["Trapezoid","Triangle"] },
+  { brand:"Levi's", productName:"505 Regular", gender:"men", tags:["Oval","Rectangle"] },
+  // ── Wrangler ──
+  { brand:"Wrangler", productName:"Retro Mae Bootcut", gender:"women", tags:["Hourglass","Pear"] },
+  { brand:"Wrangler", productName:"High Rise Trouser", gender:"women", tags:["Inverted Triangle","Rectangle"] },
+  { brand:"Wrangler", productName:"Slim Bootcut", gender:"women", tags:["Pear","Apple"] },
+  { brand:"Wrangler", productName:"Cowboy Cut", gender:"men", tags:["Trapezoid","Rectangle"] },
+  { brand:"Wrangler", productName:"Retro Slim", gender:"men", tags:["Triangle","Trapezoid"] },
+  { brand:"Wrangler", productName:"Authentics Relaxed", gender:"men", tags:["Oval","Inverted Triangle"] },
+  // ── Lee ──
+  { brand:"Lee", productName:"Legendary Bootcut", gender:"women", tags:["Hourglass","Pear"] },
+  { brand:"Lee", productName:"Ultra Lux Comfort Straight", gender:"women", tags:["Apple","Rectangle"] },
+  { brand:"Lee", productName:"Flex Motion Skinny", gender:"women", tags:["Rectangle","Hourglass"] },
+  { brand:"Lee", productName:"Extreme Motion Straight", gender:"men", tags:["Oval","Rectangle"] },
+  { brand:"Lee", productName:"Legendary Regular", gender:"men", tags:["Trapezoid","Rectangle"] },
+  { brand:"Lee", productName:"Extreme Motion Slim", gender:"men", tags:["Triangle","Trapezoid"] },
+  // ── Gap ──
+  { brand:"Gap", productName:"'90s Loose", gender:"women", tags:["Rectangle","Inverted Triangle"] },
+  { brand:"Gap", productName:"Vintage Straight", gender:"women", tags:["Apple","Rectangle"] },
+  { brand:"Gap", productName:"Curvy High Rise", gender:"women", tags:["Pear","Hourglass"] },
+  { brand:"Gap", productName:"Modern Athletic Taper", gender:"men", tags:["Trapezoid","Inverted Triangle"] },
+  { brand:"Gap", productName:"Straight", gender:"men", tags:["Rectangle","Oval"] },
+  { brand:"Gap", productName:"Slim", gender:"men", tags:["Triangle","Trapezoid"] },
+  // ── Guess ──
+  { brand:"Guess", productName:"Sexy Curve Skinny", gender:"women", tags:["Hourglass","Apple"] },
+  { brand:"Guess", productName:"1981 Skinny", gender:"women", tags:["Rectangle","Apple"] },
+  { brand:"Guess", productName:"Curve X Bootcut", gender:"women", tags:["Pear","Hourglass"] },
+  { brand:"Guess", productName:"Slim Tapered", gender:"men", tags:["Trapezoid","Triangle"] },
+  { brand:"Guess", productName:"Regular Straight", gender:"men", tags:["Rectangle","Oval"] },
+  { brand:"Guess", productName:"Skinny", gender:"men", tags:["Trapezoid","Rectangle"] },
+  // ── Mavi ──
+  { brand:"Mavi", productName:"Kerry", gender:"women", tags:["Hourglass","Apple"] },
+  { brand:"Mavi", productName:"Adriana", gender:"women", tags:["Rectangle","Apple"] },
+  { brand:"Mavi", productName:"Sylvia Bootcut", gender:"women", tags:["Pear","Hourglass"] },
+  { brand:"Mavi", productName:"Jake Slim", gender:"men", tags:["Trapezoid","Triangle"] },
+  { brand:"Mavi", productName:"Marcus Slim Straight", gender:"men", tags:["Rectangle","Trapezoid"] },
+  { brand:"Mavi", productName:"Zach Straight", gender:"men", tags:["Oval","Rectangle"] },
+  // ── Diesel ──
+  { brand:"Diesel", productName:"Slandy", gender:"women", tags:["Rectangle","Hourglass"] },
+  { brand:"Diesel", productName:"D-Ollies Straight", gender:"women", tags:["Apple","Rectangle"] },
+  { brand:"Diesel", productName:"D-Ejona Bootcut", gender:"women", tags:["Pear","Inverted Triangle"] },
+  { brand:"Diesel", productName:"Larkee Relaxed", gender:"men", tags:["Oval","Inverted Triangle"] },
+  { brand:"Diesel", productName:"Zatiny Bootcut", gender:"men", tags:["Triangle","Oval"] },
+  { brand:"Diesel", productName:"D-Strukt Slim", gender:"men", tags:["Trapezoid","Triangle"] },
+  // ── 7 For All Mankind ──
+  { brand:"7 For All Mankind", productName:"Ellie Straight", gender:"women", tags:["Apple","Rectangle"] },
+  { brand:"7 For All Mankind", productName:"The Skinny", gender:"women", tags:["Hourglass","Rectangle"] },
+  { brand:"7 For All Mankind", productName:"Dojo Wide Leg", gender:"women", tags:["Inverted Triangle","Pear"] },
+  { brand:"7 For All Mankind", productName:"Adrien Slim Taper", gender:"men", tags:["Trapezoid","Triangle"] },
+  { brand:"7 For All Mankind", productName:"Slimmy", gender:"men", tags:["Rectangle","Trapezoid"] },
+  { brand:"7 For All Mankind", productName:"Straight", gender:"men", tags:["Oval","Rectangle"] },
+  // ── American Eagle ──
+  { brand:"American Eagle", productName:"Curvy Straight", gender:"women", tags:["Pear","Hourglass"] },
+  { brand:"American Eagle", productName:"Mom Jean", gender:"women", tags:["Rectangle","Apple"] },
+  { brand:"American Eagle", productName:"'90s Boyfriend", gender:"women", tags:["Inverted Triangle","Rectangle"] },
+  { brand:"American Eagle", productName:"AirFlex+ Slim", gender:"men", tags:["Trapezoid","Triangle"] },
+  { brand:"American Eagle", productName:"Relaxed Straight", gender:"men", tags:["Oval","Inverted Triangle"] },
+  { brand:"American Eagle", productName:"Original Straight", gender:"men", tags:["Rectangle","Oval"] },
+  // ── Abercrombie & Fitch ──
+  { brand:"Abercrombie & Fitch", productName:"Curve Love", gender:"women", tags:["Pear","Hourglass"] },
+  { brand:"Abercrombie & Fitch", productName:"90s Straight Ultra High Rise", gender:"women", tags:["Apple","Rectangle"] },
+  { brand:"Abercrombie & Fitch", productName:"Ultra High Rise Baggy", gender:"women", tags:["Inverted Triangle","Rectangle"] },
+  { brand:"Abercrombie & Fitch", productName:"Athletic Skinny", gender:"men", tags:["Trapezoid","Triangle"] },
+  { brand:"Abercrombie & Fitch", productName:"Slim Straight", gender:"men", tags:["Rectangle","Trapezoid"] },
+  { brand:"Abercrombie & Fitch", productName:"Relaxed Taper", gender:"men", tags:["Oval","Inverted Triangle"] },
+].map(p => ({ ...p, tier: BRAND_TIERS[p.brand], priceRange: TIER_PRICE_RANGE[BRAND_TIERS[p.brand]], url: BRAND_HOMEPAGES[p.brand] }));
+
 /* ── Jeans style SVG paths (viewBox 0 0 60 120) ─────────── */
 // Women's skinny — narrow fitted legs tapering to ankle
 const JS = {
@@ -869,14 +974,26 @@ export default function Jeanie() {
   const fetchBrands = async (fitResult) => {
     setBrandsLoading(true); setBrands(null);
     try {
+      // Ground truth first: filter the curated catalog to this gender + shape,
+      // then hand Claude only those candidates. It can no longer invent a
+      // brand, product name, tier, or URL — it can only pick from real data
+      // and write the persuasive copy (tagline / bestFor / whyItWorks).
+      const sameGender = PRODUCT_CATALOG.filter(p => p.gender === fitCategory);
+      let candidates = sameGender.filter(p => p.tags.includes(fitResult.shape));
+      if (candidates.length < 8) {
+        // Pad with other entries for this gender so Claude still has enough
+        // tier variety to choose a diverse 6 from.
+        const rest = sameGender.filter(p => !candidates.includes(p));
+        candidates = [...candidates, ...rest].slice(0, 14);
+      }
+      const candidateList = candidates.map(c => `${c.brand} — ${c.productName} (${c.tier})`).join("\n");
+
       const res = await fetch("/api/claude", {
         method:"POST", headers: CLAUDE_HEADERS,
         body: JSON.stringify({
           model:"claude-sonnet-4-5-20250929", max_tokens:1200,
-          system: fitCategory === "men"
-            ? `You are Jeanie, a denim fit-AI whose knowledge is built exclusively from the design philosophies, fit systems, wash expertise, and sizing data of ten iconic denim brands: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, and Abercrombie & Fitch. You recommend ONLY from these ten brands, and ONLY men's jeans. Given a body shape and recommended jean styles, return ONLY a raw JSON array — no markdown, no backticks, no prose. Return exactly 6 brand objects chosen from those 10 brands (no other brands). For each brand, name ONE real, currently-sold, well-known MEN'S product line from that brand's actual denim lineup (e.g. Levi's 501 Original, Levi's 511 Slim, Gap Modern Athletic Taper, Gap Straight, American Eagle AirFlex+ Slim, American Eagle Relaxed Straight, Abercrombie Athletic Skinny, Abercrombie Slim Straight, Wrangler Retro Slim, Lee Extreme Motion Straight, Guess Slim Tapered, Mavi Jake Slim, Diesel Larkee Relaxed, 7FAM Adrien Slim Taper) — this must be a real product name, not invented. Schema: [{"brand":"Brand Name","productName":"Real Product Line Name","tier":"Luxury"|"Premium"|"Mid-Range"|"Budget","tagline":"One punchy brand tagline unique to that brand.","bestFor":"Which recommended style they excel at for this shape.","priceRange":"$XX–$XXX","whyItWorks":"1–2 sentences grounded in that brand's specific fit system or signature technology and why THIS product suits this body shape.","url":"https://www.brandwebsite.com"}]. Tier guide: 7 For All Mankind & Diesel = Luxury; Mavi & Guess = Premium; Levi's & Gap & Abercrombie & Fitch & American Eagle = Mid-Range; Lee & Wrangler = Budget. Include a good mix of tiers. Only these 10 brands, no exceptions.`
-            : `You are Jeanie, a denim fit-AI whose knowledge is built exclusively from the design philosophies, fit systems, wash expertise, and sizing data of ten iconic denim brands: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, and Abercrombie & Fitch. You recommend ONLY from these ten brands, and ONLY women's jeans. Given a body shape and recommended jean styles, return ONLY a raw JSON array — no markdown, no backticks, no prose. Return exactly 6 brand objects chosen from those 10 brands (no other brands). For each brand, name ONE real, currently-sold, well-known WOMEN'S product line from that brand's actual denim lineup (e.g. Levi's 501 Original, Levi's Ribcage Straight, Gap '90s Loose, Gap Modern Bootcut, American Eagle Curvy Straight, American Eagle Mom Jean, Abercrombie Curve Love, Abercrombie 90s Straight Ultra High Rise, Wrangler Retro Slim, Lee Legendary Bootcut, Guess Sexy Curve Skinny, Mavi Kerry, Diesel Slandy, 7FAM Ellie Straight) — this must be a real product name, not invented. Schema: [{"brand":"Brand Name","productName":"Real Product Line Name","tier":"Luxury"|"Premium"|"Mid-Range"|"Budget","tagline":"One punchy brand tagline unique to that brand.","bestFor":"Which recommended style they excel at for this shape.","priceRange":"$XX–$XXX","whyItWorks":"1–2 sentences grounded in that brand's specific fit system or signature technology and why THIS product suits this body shape.","url":"https://www.brandwebsite.com"}]. Tier guide: 7 For All Mankind & Diesel = Luxury; Mavi & Guess = Premium; Levi's & Gap & Abercrombie & Fitch & American Eagle = Mid-Range; Lee & Wrangler = Budget. Include a good mix of tiers. Only these 10 brands, no exceptions.`,
-          messages:[{ role:"user", content:`Body shape: ${fitResult.shape} (${fitCategory}'s fit). Recommended styles: ${fitResult.recommendations.map(r => r.style).join(", ")}. Return the 6 best ${fitCategory}'s jean brand + real product recommendations as a JSON array only, chosen exclusively from: Levi's, Wrangler, Lee, Gap, Guess, Mavi, Diesel, 7 For All Mankind, American Eagle, Abercrombie & Fitch.` }],
+          system: `You are Jeanie, a denim fit-AI. You will be given a fixed list of real, currently-sold ${fitCategory}'s jean products (brand, product name, price tier) and a detected body shape. Choose exactly 6 entries from that list — one per distinct brand, a good mix of tiers — that best suit the shape. You MUST copy the brand and productName EXACTLY as given; never alter, invent, or substitute a product not on the list. For each chosen entry, write a punchy brand tagline, which recommended style it's "bestFor", and 1–2 sentences ("whyItWorks") grounded in that brand's real fit-system reputation explaining why THIS product suits this shape. Return ONLY a raw JSON array, no markdown, no backticks, no prose. Schema: [{"brand":"...","productName":"...","tagline":"...","bestFor":"...","whyItWorks":"..."}].`,
+          messages:[{ role:"user", content:`Body shape: ${fitResult.shape} (${fitCategory}'s fit). Recommended styles: ${fitResult.recommendations.map(r => r.style).join(", ")}.\n\nChoose exactly 6 from this list:\n${candidateList}` }],
         }),
       });
       const data = await res.json();
@@ -885,41 +1002,54 @@ export default function Jeanie() {
       const clean = raw.replace(/```json|```/g, "").trim();
       const m = clean.match(/\[[\s\S]*\]/);
       if (!m) throw new Error("Could not parse brands");
-      // Plain homepages only — category and search-query URLs can't be verified live
-      // and were breaking (wrong locale, 404s, wrong category). The homepage always loads.
-      const BRAND_URLS = {
-        "Levi's":              "https://www.levi.com",
-        "Wrangler":            "https://www.wrangler.com",
-        "Lee":                 "https://www.lee.com",
-        "Gap":                 "https://www.gap.com",
-        "Guess":               "https://www.guess.com",
-        "Mavi":                "https://www.mavi.com",
-        "Diesel":              "https://www.diesel.com",
-        "7 For All Mankind":   "https://www.7forallmankind.com",
-        "American Eagle":      "https://www.ae.com",
-        "Abercrombie & Fitch": "https://www.abercrombie.com",
-      };
-      const buildUrl = (brand) => BRAND_URLS[brand];
-      let raw_brands = JSON.parse(m[0]).map(b => ({ ...b, url: buildUrl(b.brand) || b.url }));
+      const aiPicks = JSON.parse(m[0]);
 
-      // Guarantee A&F always appears
-      const anfProductName = fitCategory === "men" ? "Slim Straight" : "Curve Love";
-      const ANF_DEFAULT = {
-        brand: "Abercrombie & Fitch",
-        productName: anfProductName,
-        tier: "Mid-Range",
-        tagline: "Denim engineered for real bodies.",
-        bestFor: fitResult.recommendations[0]?.style || "Straight",
-        priceRange: "$60–$120",
-        whyItWorks: fitCategory === "men"
-          ? `Abercrombie's Slim Straight fit tapers cleanly through the leg while leaving room through the seat and thigh, making it a strong match for the ${fitResult.shape} shape.`
-          : `Abercrombie's Curve Love fit is cut with extra room through the hip and thigh, making it a strong match for the ${fitResult.shape} shape.`,
-        url: buildUrl("Abercrombie & Fitch"),
-      };
-      if (!raw_brands.some(b => b.brand === "Abercrombie & Fitch")) {
-        raw_brands = [...raw_brands.slice(0, 5), ANF_DEFAULT];
+      // Validate every pick against the catalog — tier/priceRange/url always
+      // come from OUR data, never the model's, so a hallucinated field can't
+      // reach the UI even if the model ignores instructions.
+      const usedBrands = new Set();
+      let picks = [];
+      for (const pick of aiPicks) {
+        const match = candidates.find(c => c.brand === pick.brand && c.productName === pick.productName);
+        if (!match || usedBrands.has(match.brand)) continue;
+        usedBrands.add(match.brand);
+        picks.push({
+          brand: match.brand, productName: match.productName, tier: match.tier,
+          priceRange: match.priceRange, url: match.url,
+          tagline: pick.tagline || `${match.brand} denim, done right.`,
+          bestFor: pick.bestFor || fitResult.recommendations[0]?.style || "Straight",
+          whyItWorks: pick.whyItWorks || `${match.brand}'s ${match.productName} is a proven match for the ${fitResult.shape} shape.`,
+        });
       }
-      setBrands(raw_brands);
+      // Backfill from unused candidates if the model returned fewer than 6
+      // valid, catalog-verified picks.
+      if (picks.length < 6) {
+        for (const c of candidates) {
+          if (picks.length >= 6) break;
+          if (usedBrands.has(c.brand)) continue;
+          usedBrands.add(c.brand);
+          picks.push({
+            brand: c.brand, productName: c.productName, tier: c.tier, priceRange: c.priceRange, url: c.url,
+            tagline: `${c.brand} denim, done right.`,
+            bestFor: fitResult.recommendations[0]?.style || "Straight",
+            whyItWorks: `${c.brand}'s ${c.productName} is a proven match for the ${fitResult.shape} shape.`,
+          });
+        }
+      }
+      // Guarantee Abercrombie & Fitch always appears (existing product promise).
+      if (!picks.some(p => p.brand === "Abercrombie & Fitch")) {
+        const anf = sameGender.find(p => p.brand === "Abercrombie & Fitch" && p.tags.includes(fitResult.shape))
+          || sameGender.find(p => p.brand === "Abercrombie & Fitch");
+        if (anf) {
+          picks = [...picks.slice(0, 5), {
+            brand: anf.brand, productName: anf.productName, tier: anf.tier, priceRange: anf.priceRange, url: anf.url,
+            tagline: "Denim engineered for real bodies.",
+            bestFor: fitResult.recommendations[0]?.style || "Straight",
+            whyItWorks: `Abercrombie's ${anf.productName} is cut to suit the ${fitResult.shape} shape.`,
+          }];
+        }
+      }
+      setBrands(picks);
     } catch (e) { console.error("Brands error:", e); setBrands([]); }
     finally { setBrandsLoading(false); }
   };
