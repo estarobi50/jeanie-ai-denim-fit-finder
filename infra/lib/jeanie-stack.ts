@@ -218,10 +218,15 @@ function handler(event) {
     // .stage owns the 3D depth context — everything inside shares one vanishing point.
     + '.stage{position:relative;display:flex;align-items:center;justify-content:center;perspective:1400px;width:100%;max-width:360px;}'
     + '.glow{position:absolute;width:120%;height:70%;border-radius:50%;background:radial-gradient(ellipse,rgba(154,120,40,0.30),rgba(154,120,40,0) 70%);filter:blur(20px);pointer-events:none;opacity:.35;transform:scale(1);z-index:0;}'
-    + '.ground{position:absolute;bottom:-22px;width:72%;height:22px;border-radius:50%;background:radial-gradient(ellipse,rgba(24,17,10,0.22),rgba(24,17,10,0) 72%);opacity:.18;transform:scaleX(1);z-index:0;}'
+    + '.ground{position:absolute;bottom:-22px;width:72%;height:22px;border-radius:50%;background:radial-gradient(ellipse,rgba(24,17,10,0.22),rgba(24,17,10,0) 72%);opacity:.18;transform:scaleX(1);z-index:0;pointer-events:none;}'
+    // transform-style:preserve-3d intentionally omitted — nothing inside the
+    // card needs shared 3D space with its rotation, and combined with the
+    // infinite ambient float animation it caused unreliable click hit-testing
+    // on the submit button in some browsers (keyboard Enter still worked,
+    // since that bypasses hit-testing — that mismatch is what gave it away).
     + '.card{position:relative;z-index:1;background:#fff;border:1px solid rgba(28,18,8,0.09);border-radius:20px;padding:48px 40px;width:100%;text-align:center;'
     + 'box-shadow:0 2px 4px rgba(24,17,10,.04),0 14px 28px -10px rgba(24,17,10,.12),0 36px 64px -24px rgba(154,120,40,.20);'
-    + 'transform-style:preserve-3d;backface-visibility:hidden;opacity:1;transform:none;}'
+    + 'opacity:1;transform:none;}'
     + '.logo{display:flex;align-items:baseline;justify-content:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;opacity:1;transform:none;}'
     + '.logo .wordmark{font-family:\\'Cormorant Garamond\\',serif;font-weight:600;font-style:italic;font-size:34px;letter-spacing:-0.04em;color:#18110a;}'
     + '.logo .tag{font-family:\\'JetBrains Mono\\',monospace;font-size:9px;font-weight:500;letter-spacing:0.22em;color:#9a7828;text-transform:uppercase;border-left:1px solid rgba(28,18,8,0.09);padding-left:8px;}'
