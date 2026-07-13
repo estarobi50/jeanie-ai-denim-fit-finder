@@ -214,20 +214,49 @@ function handler(event) {
     + '<style>'
     + '*{box-sizing:border-box}'
     + 'html{-webkit-text-size-adjust:100%;}'
-    + 'body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#f7f4ef;font-family:\\'JetBrains Mono\\',monospace;padding:20px;}'
-    + '.card{background:#fff;border:1px solid rgba(28,18,8,0.09);border-radius:20px;padding:48px 40px;max-width:360px;width:100%;box-shadow:0 4px 24px -4px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.05);text-align:center;}'
-    + '.logo{display:flex;align-items:baseline;justify-content:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}'
+    + 'body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#f7f4ef;font-family:\\'JetBrains Mono\\',monospace;padding:20px;overflow:hidden;}'
+    // .stage owns the 3D depth context — everything inside shares one vanishing point.
+    + '.stage{position:relative;display:flex;align-items:center;justify-content:center;perspective:1400px;width:100%;max-width:360px;}'
+    + '.glow{position:absolute;width:120%;height:70%;border-radius:50%;background:radial-gradient(ellipse,rgba(154,120,40,0.30),rgba(154,120,40,0) 70%);filter:blur(20px);pointer-events:none;opacity:.35;transform:scale(1);z-index:0;}'
+    + '.ground{position:absolute;bottom:-22px;width:72%;height:22px;border-radius:50%;background:radial-gradient(ellipse,rgba(24,17,10,0.22),rgba(24,17,10,0) 72%);opacity:.18;transform:scaleX(1);z-index:0;}'
+    + '.card{position:relative;z-index:1;background:#fff;border:1px solid rgba(28,18,8,0.09);border-radius:20px;padding:48px 40px;width:100%;text-align:center;'
+    + 'box-shadow:0 2px 4px rgba(24,17,10,.04),0 14px 28px -10px rgba(24,17,10,.12),0 36px 64px -24px rgba(154,120,40,.20);'
+    + 'transform-style:preserve-3d;backface-visibility:hidden;opacity:1;transform:none;}'
+    + '.logo{display:flex;align-items:baseline;justify-content:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;opacity:1;transform:none;}'
     + '.logo .wordmark{font-family:\\'Cormorant Garamond\\',serif;font-weight:600;font-style:italic;font-size:34px;letter-spacing:-0.04em;color:#18110a;}'
     + '.logo .tag{font-family:\\'JetBrains Mono\\',monospace;font-size:9px;font-weight:500;letter-spacing:0.22em;color:#9a7828;text-transform:uppercase;border-left:1px solid rgba(28,18,8,0.09);padding-left:8px;}'
     + '.sub{font-size:11px;color:#8a7060;letter-spacing:0.14em;margin-bottom:32px;text-transform:uppercase;}'
     // 16px avoids iOS Safari's auto-zoom-on-focus for inputs under 16px.
-    + 'input[type=password]{width:100%;padding:14px 16px;border-radius:12px;border:1px solid rgba(28,18,8,0.14);font-family:\\'JetBrains Mono\\',monospace;font-size:16px;letter-spacing:0.06em;margin-bottom:16px;background:#f7f4ef;color:#18110a;outline:none;-webkit-appearance:none;appearance:none;}'
+    + 'input[type=password]{width:100%;padding:14px 16px;border-radius:12px;border:1px solid rgba(28,18,8,0.14);font-family:\\'JetBrains Mono\\',monospace;font-size:16px;letter-spacing:0.06em;margin-bottom:16px;background:#f7f4ef;color:#18110a;outline:none;-webkit-appearance:none;appearance:none;transition:border-color 200ms ease-out;}'
     + 'input[type=password]:focus{border-color:#9a7828;}'
-    + 'button{width:100%;padding:15px;border-radius:12px;border:none;background:#9a7828;color:#fff;font-family:\\'JetBrains Mono\\',monospace;font-size:12px;letter-spacing:0.10em;text-transform:uppercase;font-weight:500;cursor:pointer;-webkit-appearance:none;appearance:none;}'
-    + '@media (max-width:420px){.card{padding:36px 24px;border-radius:16px;}.logo .wordmark{font-size:28px;}.sub{font-size:10px;margin-bottom:26px;}}'
-    + 'button:hover{background:#c8a64b;}'
+    + 'button{width:100%;padding:15px;border-radius:12px;border:none;background:#9a7828;color:#fff;font-family:\\'JetBrains Mono\\',monospace;font-size:12px;letter-spacing:0.10em;text-transform:uppercase;font-weight:500;cursor:pointer;-webkit-appearance:none;appearance:none;transition:background 200ms ease-out,transform 200ms cubic-bezier(.22,1,.36,1),box-shadow 200ms ease-out;}'
+    + 'button:hover{background:#c8a64b;transform:translateY(-2px);box-shadow:0 10px 20px -8px rgba(154,120,40,.45);}'
+    + 'button:active{transform:translateY(0);}'
     + '.err{color:#b8302c;font-size:11px;letter-spacing:0.05em;margin:-8px 0 16px;}'
+    + '@media (max-width:420px){.card{padding:36px 24px;border-radius:16px;}.logo .wordmark{font-size:28px;}.sub{font-size:10px;margin-bottom:26px;}}'
+    // Entrance lives entirely in this query: the base rules above are already the
+    // final, visible state, so reduced-motion / no-animation environments just
+    // show the finished page instantly — nothing is gated behind motion.
+    + '@media (prefers-reduced-motion:no-preference){'
+    + '.card{animation:cardJump 900ms cubic-bezier(.34,1.56,.64,1) both,cardFloat 7s ease-in-out 900ms infinite;}'
+    + '.glow{animation:glowIn 900ms cubic-bezier(.34,1.56,.64,1) both,glowPulse 5s ease-in-out 900ms infinite;}'
+    + '.ground{animation:groundIn 900ms cubic-bezier(.22,1,.36,1) both;}'
+    + '.logo{animation:logoIn 650ms cubic-bezier(.34,1.56,.64,1) 200ms both;}'
+    // No opacity in these keyframes on purpose: a physical object "jumping out"
+    // moves, it doesn't fade in — and if an animation freezes mid-flight
+    // (paused/backgrounded tab, a real failure mode headless testing caught
+    // here), the card stays fully visible, just mid-motion, never blank.
+    + '@keyframes cardJump{0%{transform:translateZ(-560px) translateY(36px) rotateX(22deg) scale(.7);}100%{transform:translateZ(0) translateY(0) rotateX(0) scale(1);}}'
+    + '@keyframes cardFloat{0%,100%{transform:translateZ(0) translateY(0) rotateX(0) scale(1);}50%{transform:translateZ(8px) translateY(-4px) rotateX(1deg) scale(1.004);}}'
+    + '@keyframes glowIn{0%{transform:scale(.55);}100%{transform:scale(1);}}'
+    + '@keyframes glowPulse{0%,100%{opacity:.30;}50%{opacity:.44;}}'
+    + '@keyframes groundIn{0%{transform:scaleX(.35);}100%{transform:scaleX(1);}}'
+    + '@keyframes logoIn{0%{transform:translateZ(-90px) translateY(12px);}100%{transform:translateZ(0) translateY(0);}}'
+    + '}'
     + '</style></head><body>'
+    + '<div class="stage">'
+    + '<div class="glow" aria-hidden="true"></div>'
+    + '<div class="ground" aria-hidden="true"></div>'
     + '<div class="card">'
     + '<div class="logo"><span class="wordmark">jeanie</span><span class="tag">Fit&middot;AI</span></div>'
     + '<div class="sub">Private preview &middot; enter access code</div>'
@@ -235,7 +264,7 @@ function handler(event) {
     + '<form method="GET" action="/__unlock">'
     + '<input type="password" name="key" placeholder="Access code" autofocus required/>'
     + '<button type="submit">Enter</button>'
-    + '</form></div></body></html>';
+    + '</form></div></div></body></html>';
 
   return {
     statusCode: 401,
