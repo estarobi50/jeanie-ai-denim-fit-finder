@@ -426,9 +426,9 @@ function useMobile(bp = 768) {
 }
 
 /* ── Logo ─────────────────────────────────────────────────── */
-function Logo({ size = 34 }) {
+function Logo({ size = 34, tooltipPlacement = "top" }) {
   return (
-    <Tooltip content="Jeanie Fit·AI — denim intelligence powered by Claude Vision" maxWidth={230}>
+    <Tooltip content="Jeanie Fit·AI — denim intelligence powered by Claude Vision" maxWidth={230} placement={tooltipPlacement}>
       <span style={{ display:"inline-flex", alignItems:"baseline", gap:8, cursor:"default" }}>
         <span style={{ fontFamily:"'Cormorant Garamond',serif", fontWeight:600, fontStyle:"italic", fontSize:size, letterSpacing:"-0.04em", lineHeight:1, color:T.ink }}>jeanie</span>
         <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, fontWeight:500, letterSpacing:"0.22em", color:T.accent, textTransform:"uppercase", borderLeft:`1px solid ${T.border}`, paddingLeft:8 }}>Fit·AI</span>
@@ -1208,7 +1208,7 @@ export default function Jeanie() {
         boxShadow:"0 1px 0 rgba(28,18,8,0.05)",
       }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <a href="#top"><Logo size={mob ? 26 : 32}/></a>
+          <a href="#top"><Logo size={mob ? 26 : 32} tooltipPlacement="bottom"/></a>
           {mob ? (
             /* Mobile: hamburger + CTA */
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -1232,12 +1232,12 @@ export default function Jeanie() {
                 ["How it works","#process","Three steps from photo to perfect pair"],
                 ["FAQ","#faq","Common questions answered honestly"],
               ].map(([l, h, tip]) => (
-                <Tooltip key={l} content={tip} maxWidth={200}>
+                <Tooltip key={l} content={tip} maxWidth={200} placement="bottom">
                   <a href={h} className="link-mute nav-link" style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, letterSpacing:"0.04em" }}>{l}</a>
                 </Tooltip>
               ))}
               <Magnetic>
-                <Tooltip content="Try the AI fit analysis — free, no account needed" maxWidth={200}>
+                <Tooltip content="Try the AI fit analysis — free, no account needed" maxWidth={200} placement="bottom">
                   <a href="#analyzer" className="btn-primary" style={{ padding:"9px 20px", borderRadius:999, fontSize:12, fontWeight:500, letterSpacing:"0.02em", display:"inline-flex", alignItems:"center", gap:6, cursor:"pointer" }}>
                     Try free
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
